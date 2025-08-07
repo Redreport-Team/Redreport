@@ -15,6 +15,7 @@
     "@grpc/grpc-js": "^1.12.6",
     "@maptiler/leaflet-maptilersdk": "^4.0.2",
     "firebase": "^11.2.0",
+    "firestore": "^1.1.6",
     "ipify": "^6.0.0",
     "leaflet": "^1.9.4",
     "react": "^18.2.0",
@@ -32,6 +33,6 @@
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.6",
     "typescript": "^5.2.2",
-    "vite": "^5.4.14"
+    "vite": "^7.1.0"
   }
 }

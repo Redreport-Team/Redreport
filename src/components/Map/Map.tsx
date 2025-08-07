@@ -288,6 +288,10 @@ function Map({ reports = [], onReportClick }: MapProps) {
         const circleColor =
           typeColors[parseInt(mostCommonType) as keyof typeof typeColors] ||
           "#666666";
+
+        // Create detailed popup with enhanced information
+        const popupContent = createEnhancedPopup(mapPoint);
+
         // Create main incident circle
         L.circle(mapPoint.coordinates, {
           color: circleColor,
@@ -295,10 +299,12 @@ function Map({ reports = [], onReportClick }: MapProps) {
           fillOpacity: 0.7,
           radius: circleSize,
           weight: 2,
-        }).addTo(mapRef.current!);
-
-        // Create detailed popup with enhanced information
-        const popupContent = createEnhancedPopup(mapPoint);
+        })
+          .addTo(mapRef.current!)
+          .bindPopup(popupContent, {
+            maxWidth: 400,
+            className: "enhanced-popup",
+          });
 
         // Determine campus-based color and border
         let fillColor = "black";
@@ -421,7 +427,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
   return (
     <div className="fullscreen-map-container">
       {/* Filter Menu */}
-      <div className={`map-filter-menu m-2`}>
+      <div className={`map-filter-menu m-2${filters.showMenu ? " open" : ""}`}>
         <button
           className="menu-toggle-btn"
           onClick={() => handleFilterChange("showMenu", !filters.showMenu)}

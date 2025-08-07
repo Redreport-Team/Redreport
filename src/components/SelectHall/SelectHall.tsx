@@ -319,7 +319,7 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
             className="button redbg base"
             onClick={(e) => {
               e.currentTarget.focus();
-              handleTypeSelect(1, "Sexual Harassment");
+              handleTypeSelect(1, "Sexual Misconduct");
             }}
           >
             Sexual Harassment
@@ -328,10 +328,10 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
             className="button purplebg base"
             onClick={(e) => {
               e.currentTarget.focus();
-              handleTypeSelect(2, "Physical");
+              handleTypeSelect(2, "Physical Aggression");
             }}
           >
-            Physical
+            Physical Aggression
           </button>
 
           <button

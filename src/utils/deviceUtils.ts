@@ -66,8 +66,8 @@ export function getUserContext(): UserContext {
 export function getIncidentTypeName(type: number): string {
   const typeNames = [
     "Uncomfortable Situation",
-    "Sexual Harassment",
-    "Physical",
+    "Sexual Misconduct",
+    "Physical Aggression",
     "Verbal Aggression",
     "Discrimination",
   ];

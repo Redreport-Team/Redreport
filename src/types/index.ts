@@ -24,7 +24,6 @@ export interface Report {
   };
   incidentDetails?: {
     typeName: string;
-    severity?: number;
     description?: string;
   };
 }
@@ -52,7 +51,6 @@ export interface Case {
   };
   incidentDetails?: {
     typeName: string;
-    severity?: number;
     description?: string;
   };
 }

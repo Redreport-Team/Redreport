@@ -545,27 +545,66 @@ h6 {
 /* Responsive Design */
 @media (max-width: 768px) {
   .map-filter-menu {
-    max-width: 280px;
-    min-width: 250px;
+    max-width: 90vw;
+    min-width: 0;
+    width: 90vw;
+    left: 5vw;
+    top: 10px;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    position: fixed;
+    z-index: 1101;
+    padding: 10px 8px !important;
+    font-size: 13px;
+    transition: transform 0.3s ease;
+    transform: translateY(-100%);
+  }
+  .map-filter-menu.m-2 {
+    margin: 0 !important;
+  }
+  .map-filter-menu.open {
+    transform: translateY(0);
+  }
+  .menu-toggle-btn {
+    position: fixed;
     top: 10px;
     left: 10px;
+    right: auto;
+    z-index: 1102;
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
   }
-
   .filter-content {
-    padding: 15px;
+    padding: 10px 4px !important;
+    max-height: 35vh;
   }
-
-  .back-button {
-    top: 10px;
-    right: 10px;
+  .filter-content h3 {
+    font-size: 15px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+  .filter-section label,
+  .filter-section select,
+  .type-checkbox,
+  .clear-filters-btn,
+  .results-summary {
+    font-size: 12px !important;
+  }
+  .clear-filters-btn {
+    padding: 8px !important;
+    margin-bottom: 8px !important;
+  }
+  .results-summary {
+    padding: 8px !important;
   }
 }
 
 @media (max-width: 480px) {
   .map-filter-menu {
-    max-width: calc(100vw - 40px);
+    max-width: calc(70vw - 40px);
     min-width: auto;
-    width: calc(100vw - 40px);
+    width: calc(70vw - 40px);
     /* Already at top: 10px; left: 10px; from above */
   }
 
