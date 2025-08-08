@@ -427,7 +427,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
   return (
     <div className="fullscreen-map-container">
       {/* Filter Menu */}
-      <div className={`map-filter-menu m-2${filters.showMenu ? " open" : ""}`}>
+      <div className={`map-filter-menu m-3 ${filters.showMenu ? " open" : ""}`}>
         <button
           className="menu-toggle-btn"
           onClick={() => handleFilterChange("showMenu", !filters.showMenu)}
