@@ -71,8 +71,8 @@ function Map({ reports = [], onReportClick }: MapProps) {
   // Incident type options
   const incidentTypes = [
     { id: 0, name: "Uncomfortable Situation", color: "#de9e36" },
-    { id: 1, name: "Sexual Harassment", color: "#ca3c25" },
-    { id: 2, name: "Physical", color: "#701d52" },
+    { id: 1, name: "Sexual Misconduct", color: "#ca3c25" },
+    { id: 2, name: "Physical Aggression", color: "#701d52" },
     { id: 3, name: "Verbal Aggression", color: "#212475" },
     { id: 4, name: "Discrimination", color: "#1d1a05" },
   ];
@@ -365,8 +365,8 @@ function Map({ reports = [], onReportClick }: MapProps) {
 
     const typeInfo = [
       { name: "Uncomfortable Situation", color: "#de9e36" },
-      { name: "Sexual Harassment", color: "#ca3c25" },
-      { name: "Physical", color: "#701d52" },
+      { name: "Sexual Misconduct", color: "#ca3c25" },
+      { name: "Physical Aggression", color: "#701d52" },
       { name: "Verbal Aggression", color: "#212475" },
       { name: "Discrimination", color: "#1d1a05" },
     ];

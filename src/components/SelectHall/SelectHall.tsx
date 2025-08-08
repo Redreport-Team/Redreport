@@ -322,7 +322,7 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
               handleTypeSelect(1, "Sexual Misconduct");
             }}
           >
-            Sexual Harassment
+            Sexual Misconduct
           </button>
           <button
             className="button purplebg base"
