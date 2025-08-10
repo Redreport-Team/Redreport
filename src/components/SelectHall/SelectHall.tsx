@@ -195,7 +195,13 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
         hallWithCoordinates?.longitude
       );
 
-      navigate("/map");
+      navigate("/map", {
+        state: {
+          focusDorm: e,
+          focusLat: hallWithCoordinates?.latitude,
+          focusLng: hallWithCoordinates?.longitude,
+        },
+      });
     } catch (error) {
       console.error("Error submitting report:", error);
       alert("Error submitting report. Please try again.");

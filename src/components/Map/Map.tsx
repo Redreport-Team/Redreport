@@ -1,5 +1,6 @@
 import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import "leaflet/dist/leaflet.css";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import React from "react";
@@ -48,6 +49,34 @@ function Map({ reports = [], onReportClick }: MapProps) {
     showMenu: false,
   });
   const mapRef = useRef<L.Map | null>(null);
+  const location = useLocation();
+
+  // Focus helper to zoom/pan based on navigation state
+  const focusFromNavigationState = () => {
+    if (!mapRef.current) return;
+    const state = location.state as
+      | { focusDorm?: string; focusLat?: number; focusLng?: number }
+      | undefined;
+    if (!state) return;
+
+    const { focusLat, focusLng, focusDorm } = state;
+    if (typeof focusLat === "number" && typeof focusLng === "number") {
+      mapRef.current.flyTo([focusLat, focusLng], 18, {
+        animate: true,
+        duration: 1.2,
+      });
+      return;
+    }
+    if (focusDorm) {
+      const hall = NDHallsWithCoordinates.find((h) => h.name === focusDorm);
+      if (hall) {
+        mapRef.current.flyTo([hall.latitude, hall.longitude], 18, {
+          animate: true,
+          duration: 1.2,
+        });
+      }
+    }
+  };
 
   // Get unique campuses from hall data
   const campuses = [
@@ -183,23 +212,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
 
         // Use Firebase service instead of direct API call
         const cases: Case[] = await FirebaseService.getReports(1000);
-
-        if (cases.length === 0) {
-          // Fallback to API if Firebase is not available
-          const response = await fetch(
-            "https://red-report.vercel.app/api/import"
-          );
-          const data = await response.json();
-          const fallbackCases: Case[] = data.map((point: any) => ({
-            id: point.id,
-            Dorm: point.Dorm,
-            Time: new Date(point.Time),
-            Type: point.Type,
-          }));
-          SetPoints(fallbackCases);
-        } else {
-          SetPoints(cases);
-        }
+        SetPoints(cases);
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("Failed to load incident data");
@@ -223,8 +236,17 @@ function Map({ reports = [], onReportClick }: MapProps) {
       }).addTo(mapRef.current);
     }
 
+    // After map is initialized, focus to reported location if provided
+    focusFromNavigationState();
+
     getData();
   }, []);
+
+  // Zoom to the newly reported location if provided via navigation state
+  useEffect(() => {
+    if (!mapRef.current) return;
+    focusFromNavigationState();
+  }, [location.state]);
 
   // Apply filters when filters change
   useEffect(() => {
@@ -313,13 +335,14 @@ function Map({ reports = [], onReportClick }: MapProps) {
         } else if (mapPoint.location === "Holy Cross") {
           fillColor = "#fff";
         } else if (mapPoint.location === "Saint Mary's") {
-          fillColor = "#87CEEB"; // light blue
+          fillColor = "#5081ec";
         }
 
         L.circle(mapPoint.coordinates, {
           fillColor: fillColor,
-          fillOpacity: 0.5,
+          fillOpacity: 0.9,
           color: fillColor,
+          opacity: 0.5,
           radius: 15,
         })
           .addTo(mapRef.current!)
@@ -427,12 +450,14 @@ function Map({ reports = [], onReportClick }: MapProps) {
   return (
     <div className="fullscreen-map-container">
       {/* Filter Menu */}
-      <div className={`map-filter-menu m-3 ${filters.showMenu ? " open" : ""}`}>
+      <div
+        className={`map-filter-menu ${filters.showMenu ? " open" : "hidden"}`}
+      >
         <button
           className="menu-toggle-btn"
           onClick={() => handleFilterChange("showMenu", !filters.showMenu)}
         >
-          {filters.showMenu ? "✕" : "☰"}
+          {filters.showMenu ? "✕" : "☰"} Filter
         </button>
 
         {/* Only show filter content if menu is open */}
