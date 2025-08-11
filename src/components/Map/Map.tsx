@@ -44,12 +44,19 @@ function Map({ reports = [], onReportClick }: MapProps) {
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     selectedCampus: "All",
-    selectedMonth: "All",
+    selectedMonth: "30",
     selectedTypes: [],
     showMenu: false,
   });
   const mapRef = useRef<L.Map | null>(null);
   const location = useLocation();
+
+  const isReportRepeated = (report: Case): boolean => {
+    return (
+      report.repeated === true ||
+      (Array.isArray(report.labels) && report.labels.includes("repeated"))
+    );
+  };
 
   // Focus helper to zoom/pan based on navigation state
   const focusFromNavigationState = () => {
@@ -78,7 +85,6 @@ function Map({ reports = [], onReportClick }: MapProps) {
     }
   };
 
-  // Get unique campuses from hall data
   const campuses = [
     "All",
     ...Array.from(new Set(NDHallsWithCoordinates.map((hall) => hall.location))),
@@ -88,13 +94,14 @@ function Map({ reports = [], onReportClick }: MapProps) {
   const getAvailableMonths = () => {
     const months = new Set<string>();
     Points.forEach((point) => {
+      if (isReportRepeated(point)) return;
       const date = new Date(point.Time);
       const monthYear = `${date.getFullYear()}-${String(
         date.getMonth() + 1
       ).padStart(2, "0")}`;
       months.add(monthYear);
     });
-    return ["All", ...Array.from(months).sort().reverse()];
+    return ["30", ...Array.from(months).sort().reverse()];
   };
 
   // Incident type options
@@ -134,6 +141,8 @@ function Map({ reports = [], onReportClick }: MapProps) {
   // Apply filters to points
   const applyFilters = (points: Case[]) => {
     return points.filter((point) => {
+      // Exclude repeated reports entirely
+      if (isReportRepeated(point)) return false;
       // Campus filter
       if (filters.selectedCampus !== "All") {
         const hallData = NDHallsWithCoordinates.find(
@@ -145,7 +154,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
       }
 
       // Month filter
-      if (filters.selectedMonth !== "All") {
+      if (filters.selectedMonth !== "30") {
         const pointDate = new Date(point.Time);
         const pointMonth = `${pointDate.getFullYear()}-${String(
           pointDate.getMonth() + 1
@@ -210,9 +219,19 @@ function Map({ reports = [], onReportClick }: MapProps) {
         setLoading(true);
         setError(null);
 
-        // Use Firebase service instead of direct API call
         const cases: Case[] = await FirebaseService.getReports(1000);
-        SetPoints(cases);
+        const nonRepeated = cases.filter((c) => !isReportRepeated(c));
+
+        SetPoints(nonRepeated);
+
+        // Default Filter
+        const thirtyOneDays = new Date();
+        thirtyOneDays.setDate(thirtyOneDays.getDate() - 31);
+
+        const recentIncidents = nonRepeated.filter(
+          (incident) => new Date(incident.Time) >= thirtyOneDays
+        );
+        setFilteredPoints(applyFilters(recentIncidents));
       } catch (error) {
         console.error("Error fetching data:", error);
         setError("Failed to load incident data");
@@ -240,6 +259,8 @@ function Map({ reports = [], onReportClick }: MapProps) {
     focusFromNavigationState();
 
     getData();
+    // Log map view once when component mounts
+    AnalyticsService.logMapView();
   }, []);
 
   // Zoom to the newly reported location if provided via navigation state
@@ -275,11 +296,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
           mapPoints[hallName].totalIncidents++;
           mapPoints[hallName].incidentCounts[point.Type]++;
 
-          // Add to recent incidents (keep last 10)
           mapPoints[hallName].recentIncidents.push(point);
-          if (mapPoints[hallName].recentIncidents.length > 10) {
-            mapPoints[hallName].recentIncidents.shift();
-          }
         }
       } catch (error) {
         console.warn(`Error processing incident for ${point.Dorm}:`, error);
@@ -352,39 +369,48 @@ function Map({ reports = [], onReportClick }: MapProps) {
           });
       }
     });
-
-    // Log map view analytics
-    AnalyticsService.logMapView();
   }, [filteredPoints]);
 
   const createEnhancedPopup = (mapPoint: EnhancedMapPoint): string => {
-    // Calculate risk score based on recent incidents (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    // Parameters
+    const lambda = 0.15; // Decay rate for recency (per day)
+    const now = new Date();
+    const mostRecent = mapPoint.recentIncidents
+      .map((incident) => new Date(incident.Time))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+    const diffTime = Math.abs(now.getTime() - mostRecent.getTime());
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-    const recentIncidents = mapPoint.recentIncidents.filter(
-      (incident) => new Date(incident.Time) >= sevenDaysAgo
-    );
+    // Helper: get time of day multiplier
+    function getTimeOfDayMultiplier(date: Date) {
+      const hour = date.getHours();
+      if (hour >= 22 || hour < 5) return 2.0; // Late night
+      if (hour >= 18 && hour < 22) return 1.5; // Evening
+      return 1.0; // Daytime
+    }
 
-    // Calculate risk score based on number of recent incidents (all types equal)
-    let riskScore = 1;
+    // Calculate weighted sum
+    let weightedSum = 0;
+    for (const incident of mapPoint.recentIncidents) {
+      const incidentDate = new Date(incident.Time);
+      const daysAgo =
+        (now.getTime() - incidentDate.getTime()) / (1000 * 60 * 60 * 24);
+      const recencyWeight = Math.exp(-lambda * daysAgo);
+      const timeOfDayMultiplier = getTimeOfDayMultiplier(incidentDate);
+      weightedSum += recencyWeight * timeOfDayMultiplier;
+    }
 
-    // Simple count-based risk scoring (all incident types treated equally)
-    if (recentIncidents.length >= 5) riskScore = 5;
-    else if (recentIncidents.length >= 3) riskScore = 4;
-    else if (recentIncidents.length >= 2) riskScore = 3;
-    else if (recentIncidents.length >= 1) riskScore = 2;
-    else riskScore = 1;
+    let riskScore = weightedSum;
 
-    // Risk color based on score
+    riskScore = Math.max(1, Math.min(5, Math.round(riskScore * 5) / 5));
     const riskColor =
       riskScore >= 4
-        ? "#ca3c25" // Red for high risk
+        ? "#ca3c25"
         : riskScore >= 3
-        ? "#de9e36" // Orange for medium-high risk
+        ? "#de9e36"
         : riskScore >= 2
-        ? "#212475" // Blue for medium risk
-        : "#28a745"; // Green for low risk
+        ? "#FFD700"
+        : "#28a745";
 
     const typeInfo = [
       { name: "Uncomfortable Situation", color: "#de9e36" },
@@ -434,12 +460,18 @@ function Map({ reports = [], onReportClick }: MapProps) {
             ${riskScore}/5
           </span>
           ${
-            recentIncidents.length > 0
-              ? `<br><span style="font-size: 12px; color: #666;">
-              (${recentIncidents.length} recent case${
-                  recentIncidents.length > 1 ? "s" : ""
-                } in last 7 days)
-            </span>`
+            mapPoint.recentIncidents.length > 0
+              ? (() => {
+                  return `<br><span style="font-size: 12px; color: #666;">
+                    Last report: ${
+                      diffDays === 0
+                        ? "Today"
+                        : diffDays === 1
+                        ? "1 day ago"
+                        : `${diffDays} days ago`
+                    }
+                  </span>`;
+                })()
               : '<br><span style="font-size: 12px; color: #28a745;">(No recent activity)</span>'
           }
         </div>
@@ -494,7 +526,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
               >
                 {getAvailableMonths().map((month) => (
                   <option key={month} value={month}>
-                    {month === "All" ? "All Time" : month}
+                    {month === "30" ? "Last 30 Days" : month}
                   </option>
                 ))}
               </select>
@@ -558,7 +590,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
               onClick={() =>
                 setFilters({
                   selectedCampus: "All",
-                  selectedMonth: "All",
+                  selectedMonth: "30",
                   selectedTypes: [],
                   showMenu: filters.showMenu,
                 })
@@ -572,7 +604,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
               {filters.selectedCampus !== "All" && (
                 <p>Campus: {filters.selectedCampus}</p>
               )}
-              {filters.selectedMonth !== "All" && (
+              {filters.selectedMonth !== "30" && (
                 <p>Period: {filters.selectedMonth}</p>
               )}
               {filters.selectedTypes.length > 0 && (

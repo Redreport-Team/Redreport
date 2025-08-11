@@ -8,6 +8,9 @@ import { ReportFormData } from "../../types/index.ts";
 import {
   getUserContext,
   getIncidentTypeName,
+  getOrCreateDeviceId,
+  isWithinThrottleWindow,
+  setLastSubmissionTs,
 } from "../../utils/deviceUtils.ts";
 import "../../animateu.css";
 
@@ -153,11 +156,16 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
 
       // Get user context information
       const userContext = getUserContext();
+      const deviceId = getOrCreateDeviceId();
+      const within3Days = isWithinThrottleWindow(3);
 
       // Create enhanced report data
-      const enhancedReportData = {
+      const enhancedReportData: ReportFormData = {
         Dorm: e,
         Type,
+        deviceId,
+        repeated: within3Days ? true : false,
+        labels: within3Days ? ["repeated"] : [],
         hallData: hallData
           ? {
               name: hallData.name,
@@ -183,6 +191,8 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
       onSubmit?.(enhancedReportData);
 
       await FirebaseService.submitReport(enhancedReportData);
+      // Save submission timestamp for throttling
+      setLastSubmissionTs(Date.now());
       AnalyticsService.logReportSubmission(
         e,
         Type,
@@ -194,6 +204,18 @@ function SelectHall({ onHallSelect, onTypeSelect, onSubmit }: SelectHallProps) {
         hallWithCoordinates?.latitude,
         hallWithCoordinates?.longitude
       );
+
+      // Popups
+      if (within3Days) {
+        alert(
+          "You have already reported recently. Your report was saved but marked as repeated."
+        );
+      } else {
+        alert(
+          e +
+            "Report submitted successfully. Redirecting to Campus Report map..."
+        );
+      }
 
       navigate("/map", {
         state: {

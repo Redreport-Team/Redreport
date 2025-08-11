@@ -6,6 +6,9 @@ export interface Report {
   Time: Date;
   userId?: string;
   location?: string;
+  deviceId?: string;
+  repeated?: boolean;
+  labels?: string[];
   // Enhanced data fields
   hallData?: {
     name: string;
@@ -33,6 +36,9 @@ export interface Case {
   Dorm: string;
   Time: Date;
   Type: number;
+  deviceId?: string;
+  repeated?: boolean;
+  labels?: string[];
   // Enhanced data fields
   hallData?: {
     name: string;
@@ -90,6 +96,9 @@ export interface MapProps {
 export interface ReportFormData {
   Dorm: string;
   Type: number;
+  deviceId?: string;
+  repeated?: boolean;
+  labels?: string[];
   hallData?: {
     name: string;
     location: string;

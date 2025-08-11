@@ -44,6 +44,9 @@ export class FirebaseService {
           Dorm: data.Dorm,
           Type: data.Type,
           Time: data.Time?.toDate() || new Date(),
+          deviceId: data.deviceId,
+          repeated: data.repeated,
+          labels: data.labels,
           // Enhanced data fields
           hallData: data.hallData,
           userAgent: data.userAgent,
@@ -73,6 +76,9 @@ export class FirebaseService {
             Dorm: data.Dorm,
             Type: data.Type,
             Time: data.Time?.toDate() || new Date(),
+            deviceId: data.deviceId,
+            repeated: data.repeated,
+            labels: data.labels,
             // Enhanced data fields
             hallData: data.hallData,
             userAgent: data.userAgent,
@@ -103,6 +109,9 @@ export class FirebaseService {
             Dorm: data.Dorm,
             Type: data.Type,
             Time: data.Time?.toDate() || new Date(),
+            deviceId: data.deviceId,
+            repeated: data.repeated,
+            labels: data.labels,
             // Enhanced data fields
             hallData: data.hallData,
             userAgent: data.userAgent,
