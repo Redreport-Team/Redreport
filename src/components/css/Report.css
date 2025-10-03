@@ -1,0 +1,358 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(135deg, #fef8f3 0%, rgba(216, 47, 37, 0.05) 100%);
+  color: #113052;
+  line-height: 1.6;
+  min-height: 100vh;
+  overflow-x: auto;
+}
+
+/* Main Container */
+.report-container {
+  max-width: 800px;
+  margin: 4rem auto;
+  padding: 0 2rem;
+}
+
+/* Header Section */
+.report-header {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+
+.report-header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #113052;
+  margin-bottom: 1rem;
+}
+
+.report-header .highlight {
+  color: #d82f25;
+}
+
+.report-header p {
+  font-size: 1.1rem;
+  opacity: 0.8;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.security-notice {
+  background: rgba(216, 47, 37, 0.1);
+  border: 2px solid rgba(216, 47, 37, 0.2);
+  border-radius: 15px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  text-align: center;
+}
+
+.security-notice h3 {
+  color: #d82f25;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Form Styling */
+.report-form {
+  background: white;
+  padding: 3rem;
+  border-radius: 20px;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+  border: 1px solid rgba(216, 47, 37, 0.1);
+}
+
+.form-progress {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  padding: 0 1rem;
+}
+
+.progress-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active {
+  opacity: 1;
+  color: #d82f25;
+}
+
+.step-circle {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(216, 47, 37, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.progress-step.active .step-circle {
+  background: #d82f25;
+  color: white;
+}
+
+.form-section {
+  display: none;
+  animation: fadeIn 0.5s ease;
+}
+
+.form-section.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-group {
+  margin-bottom: 2rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  color: #113052;
+  font-size: 1.1rem;
+}
+
+.form-group .label-description {
+  font-weight: 400;
+  font-size: 0.9rem;
+  opacity: 0.7;
+  margin-top: 0.25rem;
+}
+
+.form-group select,
+.form-group input,
+.form-group textarea {
+  width: 100%;
+  padding: 1rem;
+  border: 2px solid rgba(17, 48, 82, 0.2);
+  border-radius: 12px;
+  font-family: "Inter", sans-serif;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.form-group select:focus,
+.form-group input:focus,
+.form-group textarea:focus {
+  outline: none;
+  border-color: #d82f25;
+  box-shadow: 0 0 0 3px rgba(216, 47, 37, 0.1);
+}
+
+.form-group textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.checkbox-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(216, 47, 37, 0.05);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.checkbox-item:hover {
+  background: rgba(216, 47, 37, 0.1);
+}
+
+.checkbox-item input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkbox-content {
+  flex: 1;
+}
+
+.checkbox-content strong {
+  color: #113052;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.checkbox-content small {
+  opacity: 0.8;
+  font-size: 0.85rem;
+}
+
+/* Navigation Buttons */
+.form-navigation {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(17, 48, 82, 0.1);
+}
+
+.btn {
+  padding: 0.75rem 2rem;
+  border: none;
+  border-radius: 25px;
+  font-family: "Inter", sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  display: inline-block;
+}
+
+.btn-primary {
+  background: #d82f25;
+  color: white;
+  box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
+}
+
+.btn-primary:hover {
+  background: #b82620;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(216, 47, 37, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(17, 48, 82, 0.1);
+  color: #113052;
+}
+
+.btn-secondary:hover {
+  background: rgba(17, 48, 82, 0.2);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+/* Success Message */
+.success-message {
+  text-align: center;
+  padding: 2rem;
+}
+
+.success-icon {
+  font-size: 4rem;
+  color: #90a955;
+  margin-bottom: 1rem;
+}
+
+.success-message h2 {
+  color: #113052;
+  margin-bottom: 1rem;
+}
+
+.success-message p {
+  opacity: 0.8;
+  margin-bottom: 2rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .report-container {
+    padding: 0 1rem;
+    margin: 1rem auto;
+  }
+
+  .report-header h1 {
+    font-size: 2rem;
+  }
+
+  .report-form {
+    padding: 2rem 1.5rem;
+  }
+
+  .form-progress {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+  }
+
+  .progress-step {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .form-navigation {
+    flex-direction: column-reverse;
+    gap: 1rem;
+  }
+
+  .btn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-header h1 {
+    font-size: 1.75rem;
+  }
+
+  .report-form {
+    padding: 1.5rem 1rem;
+  }
+
+  .checkbox-item {
+    padding: 0.75rem;
+  }
+}
+
+/* Loading Animation */
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

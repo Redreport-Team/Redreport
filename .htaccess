@@ -1,0 +1,12 @@
+# Set correct MIME types for JS, WASM, and CSS
+AddType application/javascript .js .mjs
+AddType text/css .css
+AddType application/wasm .wasm
+
+# SPA fallback: redirect all requests to index.html except real files/folders
+RewriteEngine On
+RewriteBase /
+RewriteRule ^index\.html$ - [L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule . /index.html [L]
