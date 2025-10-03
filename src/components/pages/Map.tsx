@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "../css/Map.css";
+// MAP DOESN'T WORK YET WORKING ON CONNECTION TO THE DATABASE
 
 // Data types
 interface HallData {
