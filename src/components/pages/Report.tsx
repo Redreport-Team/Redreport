@@ -3,7 +3,7 @@ import "../css/Report.css";
 import Navigation from "../UI/Navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import locationsData from "../../locations.json";
+import { campuses, locations } from "../../types/locations";
 
 interface FormData {
   campus: string;
@@ -24,20 +24,21 @@ const Report: React.FC = () => {
     time: "",
     additionalInfo: "",
   });
-  const campusObj: Record<string, any> = locationsData.Campuses;
+  const campusObj: Record<string, any> = campuses;
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [reportId, setReportId] = useState<string>("");
   const [suggestionsList, setSuggestionsList] = useState<string[]>([]);
   const [inlineSuggestion, setInlineSuggestion] = useState<string>("");
+  const [specificLoc, setSpecificLoc] = useState<string>("");
+  const [suggestions, setSuggestions] = useState<string[]>([]);
   const mirrorRef = useRef<HTMLSpanElement | null>(null);
   const specificInputRef = useRef<HTMLInputElement | null>(null);
 
   const totalSteps = 4;
 
-  var [locations, setLocations] = useState<Record<string, any>>(
-    campusObj["Notre-Dame"]
+  var [categories, setCategories] = useState<Record<string, any>>(
+    Object.values(locations["Notre-Dame"])
   );
-  var suggestions: string[] = [];
 
   // Form Handlers
   const handleInputChange = (
@@ -47,17 +48,41 @@ const Report: React.FC = () => {
   ) => {
     const { name, value } = e.target;
     console.log("Input Change ", name, value);
-    setFormData((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
 
-    if (name == "campus") {
-      setLocations(campusObj[value]);
-    } else if (locations && formData.location) {
-      suggestions = locations[formData.location].suggestions || [];
+    if (name === "campus") {
+      // When campus is selected, update the available building types for that campus
+      if (
+        value == "Notre-Dame" ||
+        value == "Saint-Marys" ||
+        value == "Holy-Cross"
+      ) {
+        setCategories(locations[value]);
+      }
+      // Clear any previous location selection and suggestions
+      setFormData((prev) => ({
+        ...prev,
+        campus: value,
+        location: "", // Clear building type when campus changes
+        specificLocation: "", // Clear specific location when campus changes
+      }));
+      setSuggestions([]); // Clear suggestions when campus changes
+    } else if (name === "location") {
+      // When building type is selected, update suggestions with building names
+      const buildingTypeLocations = categories[value];
+      setSuggestions(
+        buildingTypeLocations.map((building: any) => building.name)
+      );
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+        specificLocation: "", // Clear specific location when building type changes
+      }));
     } else {
-      console.log("No campus or location selected yet.");
+      // For other fields, just update the form data
+      setFormData((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
     }
   };
 
@@ -194,6 +219,7 @@ const Report: React.FC = () => {
   ) => {
     handleInputChange(e);
     const value = e.target.value.trim();
+    setSpecificLoc(value);
     const list = AutoCompleteHall(value);
     setSuggestionsList(list);
 
@@ -205,6 +231,7 @@ const Report: React.FC = () => {
 
       // Only show suggestion if input is a prefix of the suggestion
       if (cleanSuggestion.startsWith(cleanInput) && cleanInput.length > 0) {
+        console.log(value + first.substring(value.length));
         setInlineSuggestion(first.substring(value.length));
       } else {
         setInlineSuggestion("");
@@ -234,7 +261,7 @@ const Report: React.FC = () => {
     }
   };
   async function SubmitReport() {
-    const docRef = await addDoc(collection(db, "Test"), {
+    const docRef = await addDoc(collection(db, "reports"), {
       ...formData,
       Time: serverTimestamp(),
       createdAt: serverTimestamp(),
@@ -305,7 +332,7 @@ const Report: React.FC = () => {
                 <div className="form-group">
                   <label htmlFor="campus">Where did you feel unsafe? *</label>
                   <div className="label-description">
-                    Select the location where the incident occurred
+                    Select the campus where the incident occurred
                   </div>
                   <select
                     id="campus"
@@ -316,14 +343,14 @@ const Report: React.FC = () => {
                   >
                     <option value="">Choose a campus</option>
                     <option value="Notre-Dame">Notre Dame</option>
-                    <option value="Saint-Mary">Saint Mary's College</option>
+                    <option value="Saint-Marys">Saint Mary's College</option>
                     <option value="Holy-Cross">Holy Cross College</option>
                   </select>
                 </div>
                 <div className="form-group">
                   <label htmlFor="location">Where did you feel unsafe? *</label>
                   <div className="label-description">
-                    Select the location where the incident occurred
+                    What type of building was it?
                   </div>
                   <select
                     id="location"
@@ -333,15 +360,13 @@ const Report: React.FC = () => {
                     required
                   >
                     <option value="">Choose a location</option>
-                    {locations && Object.keys(locations).length > 0
-                      ? Object.keys(locations).map((cat: string) => (
-                          <option key={cat} value={cat}>
-                            {cat
-                              .replace(/-/g, " ")
-                              .replace(/\b\w/g, (l) => l.toUpperCase())}
-                          </option>
-                        ))
-                      : null}
+                    {Object.keys(categories).map((cat: string) => (
+                      <option key={cat} value={cat}>
+                        {cat
+                          .replace(/-/g, " ")
+                          .replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -350,29 +375,15 @@ const Report: React.FC = () => {
                     Specific Location (Optional)
                   </label>
                   <div className="label-description">
-                    Provide more details if comfortable (building name, room,
-                    etc.)
+                    How is the building called?
                   </div>
-                  <div style={{ position: "relative" }}>
+                  <div
+                    style={{ position: "relative", display: "inline-block" }}
+                  >
                     {/* Hidden text measuring span */}
-                    <span
-                      ref={mirrorRef}
-                      aria-hidden="true"
-                      style={{
-                        position: "absolute",
-                        visibility: "hidden",
-                        whiteSpace: "pre",
-                        fontSize: "inherit",
-                        fontFamily: "inherit",
-                        letterSpacing: "inherit",
-                        padding: "8px",
-                        border: "0",
-                      }}
-                    >
-                      {formData.specificLocation}
-                    </span>
 
                     <input
+                      className="form-select"
                       ref={specificInputRef}
                       type="text"
                       id="specificLocation"
@@ -381,35 +392,22 @@ const Report: React.FC = () => {
                       onChange={handleSpecificLocationChange}
                       onKeyDown={handleSpecificLocationKeyDown}
                       placeholder="e.g., Main Library, 2nd floor"
-                      style={{
-                        background: "transparent",
-                        width: "100%",
-                        padding: "8px",
-                      }}
                       autoComplete="off"
                     />
-
-                    {inlineSuggestion && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          left: `${
-                            (mirrorRef.current?.offsetWidth || 0) + 8
-                          }px`,
-                          top: "50%",
-                          transform: "translateY(-50%)",
-                          opacity: 0.45,
-                          color: "#666",
-                          pointerEvents: "none",
-                          whiteSpace: "pre",
-                          fontFamily: "inherit",
-                          fontSize: "inherit",
-                          letterSpacing: "inherit",
-                        }}
-                      >
-                        {inlineSuggestion}
-                      </div>
-                    )}
+                    <span
+                      style={{
+                        position: "absolute",
+                        left: `${specificLoc.length * 10 + 18}px `,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                        opacity: 0.5,
+                        pointerEvents: "none",
+                        userSelect: "none",
+                        color: "#666",
+                      }}
+                    >
+                      {inlineSuggestion}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -531,9 +529,6 @@ const Report: React.FC = () => {
                     </option>
                     <option value="within-week">Within the last week</option>
                     <option value="within-month">Within the last month</option>
-                    <option value="within-semester">
-                      Within this semester
-                    </option>
                     <option value="longer-ago">Longer ago</option>
                   </select>
                 </div>

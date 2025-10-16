@@ -151,7 +151,8 @@ body {
 
 .form-group select,
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-select {
   width: 100%;
   padding: 1rem;
   border: 2px solid rgba(17, 48, 82, 0.2);
@@ -160,8 +161,11 @@ body {
   font-size: 1rem;
   transition: all 0.3s ease;
   background: white;
+  color: #113052;
 }
-
+.form-group div {
+  width: 100%;
+}
 .form-group select:focus,
 .form-group input:focus,
 .form-group textarea:focus {

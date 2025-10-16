@@ -1,641 +1,603 @@
-import React, { useState, useEffect, useRef } from "react";
 import L from "leaflet";
+import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
-import "../css/Map.css";
-// MAP DOESN'T WORK YET WORKING ON CONNECTION TO THE DATABASE
+import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
+import { campuses, allBuildings } from "../../types/locations.ts";
+import {
+  collection,
+  query,
+  where,
+  QueryConstraint,
+  getDocs,
+  Timestamp,
+} from "firebase/firestore";
+import { db } from "../../config/firebase.ts";
+import "../../components/css/Map.css";
 
-// Data types
-interface HallData {
-  name: string;
-  latitude: number;
-  longitude: number;
+interface Case {
+  campus: string;
+  location: string;
+  specificLocation: string;
+  offenseTypes: string[];
+  time: string;
+  createdAt: Timestamp;
+  additionalInfo: string;
+}
+
+interface MapProps {
+  reports?: Case[];
+  onReportClick?: (report: Case) => void;
+}
+
+interface EnhancedMapPoint {
+  buildingName: string;
+  coordinates: [number, number];
+  totalIncidents: number;
+  incidentCounts: {
+    [key: string]: number; // Type -> Count
+  };
   location: string;
   buildingType: string;
+  recentIncidents: Case[];
 }
 
-interface IncidentData {
-  id: number;
-  Dorm: string;
-  Time: Date;
-  Type: number;
+interface FilterState {
+  selectedCampus: string;
+  selectedMonth: string;
+  selectedTypes: string[];
+  showMenu: boolean;
 }
 
-interface IncidentType {
-  id: number;
-  name: string;
-  color: string;
-}
-
-interface Filters {
-  campus: string;
-  month: string;
-  types: number[];
-}
-
-// Sample data (replace with actual data source)
-const sampleHallsData: HallData[] = [
-  {
-    name: "Dillon Hall",
-    latitude: 41.7021,
-    longitude: -86.2379,
-    location: "Notre Dame",
-    buildingType: "Residence Hall",
-  },
-  {
-    name: "Alumni Hall",
-    latitude: 41.7031,
-    longitude: -86.2389,
-    location: "Notre Dame",
-    buildingType: "Residence Hall",
-  },
-  {
-    name: "Zahm Hall",
-    latitude: 41.7011,
-    longitude: -86.2369,
-    location: "Notre Dame",
-    buildingType: "Residence Hall",
-  },
-  {
-    name: "Carroll Hall",
-    latitude: 41.7041,
-    longitude: -86.2399,
-    location: "Notre Dame",
-    buildingType: "Residence Hall",
-  },
-  {
-    name: "Corby Hall",
-    latitude: 41.7051,
-    longitude: -86.2409,
-    location: "Notre Dame",
-    buildingType: "Academic",
-  },
-];
-
-const sampleIncidentsData: IncidentData[] = [
-  { id: 1, Dorm: "Dillon Hall", Time: new Date("2024-12-01"), Type: 0 },
-  { id: 2, Dorm: "Alumni Hall", Time: new Date("2024-12-02"), Type: 1 },
-  { id: 3, Dorm: "Zahm Hall", Time: new Date("2024-12-03"), Type: 2 },
-  { id: 4, Dorm: "Carroll Hall", Time: new Date("2024-12-04"), Type: 3 },
-  { id: 5, Dorm: "Dillon Hall", Time: new Date("2024-12-05"), Type: 1 },
-];
-
-const incidentTypes: IncidentType[] = [
-  { id: 0, name: "Uncomfortable Situation", color: "#de9e36" },
-  { id: 1, name: "Sexual Harassment", color: "#ca3c25" },
-  { id: 2, name: "Physical", color: "#701d52" },
-  { id: 3, name: "Verbal Aggression", color: "#212475" },
-  { id: 4, name: "Discrimination", color: "#1d1a05" },
-];
-
-const Map: React.FC = () => {
-  const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<L.Layer[]>([]);
-
-  const [isLoading, setIsLoading] = useState(true);
-  const [filterPanelOpen, setFilterPanelOpen] = useState(false);
-  const [incidentsData, setIncidentsData] = useState<IncidentData[]>([]);
-  const [filteredData, setFilteredData] = useState<IncidentData[]>([]);
-  const [filters, setFilters] = useState<Filters>({
-    campus: "All",
-    month: "All",
-    types: [],
+function Map({ reports = [], onReportClick }: MapProps) {
+  const [Points, SetPoints] = useState<Case[]>([]);
+  const [filteredPoints, setFilteredPoints] = useState<Case[]>([]);
+  const [enhancedMapPoints, setEnhancedMapPoints] = useState<
+    EnhancedMapPoint[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useState<FilterState>({
+    selectedCampus: "All",
+    selectedMonth: "All",
+    selectedTypes: [],
+    showMenu: false,
   });
+  const mapRef = useRef<L.Map | null>(null);
 
-  // Stats state
-  const [stats, setStats] = useState({
-    totalIncidents: 0,
-    highRiskAreas: 0,
-    recentIncidents: 0,
-    affectedBuildings: 0,
-  });
+  // Get available months from data
+  const getAvailableMonths = () => {
+    console.log("months");
+    const months = new Set<string>();
+    Points.forEach((point) => {
+      const date = new Date(point.createdAt.toMillis());
+      console.log(date);
+      const monthYear = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      months.add(monthYear);
+    });
+    return ["All", ...Array.from(months).sort().reverse()];
+  };
 
-  // Initialize map
-  useEffect(() => {
-    if (!mapRef.current) return;
+  // Incident type options
+  const incidentTypes = [
+    { id: 0, name: "uncomfortable-situation", color: "#de9e36" },
+    { id: 1, name: "sexual-misconduct", color: "#ca3c25" },
+    { id: 2, name: "physical-aggression", color: "#701d52" },
+    { id: 3, name: "verbal-aggression", color: "#212475" },
+    { id: 4, name: "discrimination", color: "#1d1a05" },
+  ];
 
-    const map = L.map(mapRef.current, {
-      maxZoom: 19,
-      minZoom: 13,
-    }).setView([41.7002, -86.2379], 15);
+  // Convert building data to map format with enhanced information
+  const initializeMapPoints = (): { [key: string]: EnhancedMapPoint } => {
+    const mapPoints: { [key: string]: EnhancedMapPoint } = {};
 
-    // Add MapTiler layer (replace with your API key)
-    L.tileLayer(
-      `https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=${
-        import.meta.env.VITE_MAP_KEY
-      }`,
-      {
-        attribution: "© MapTiler © OpenStreetMap contributors",
-        maxZoom: 19,
-      }
-    ).addTo(map);
+    allBuildings.forEach((building) => {
+      mapPoints[building.name] = {
+        buildingName: building.name,
+        coordinates: [building.latitude, building.longitude],
+        totalIncidents: 0,
+        incidentCounts: {
+          "uncomfortable-situation": 0,
+          "sexual-misconduct": 0,
+          "physical-aggression": 0,
+          "verbal-aggression": 0,
+          discrimination: 0,
+        },
+        buildingType: building.type,
+        location: building.location,
+        recentIncidents: [],
+      };
+    });
 
-    // Set map bounds
-    map.setMaxBounds([
-      [41.6852, -86.1779],
-      [41.7152, -86.2879],
-    ]);
+    return mapPoints;
+  };
 
-    mapInstanceRef.current = map;
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-      }
-    };
-  }, []);
-
-  // Fetch incidents data
-  useEffect(() => {
-    const fetchIncidents = async () => {
-      try {
-        const response = await fetch(
-          "https://red-report.vercel.app/api/import"
-        );
-        const data = await response.json();
-        console.log("Fetched incidents data:", data);
-        const incidents: IncidentData[] = data.map((point: any) => ({
-          id: point.id,
-          Dorm: point.Location,
-          Time: new Date(point.Time),
-          Type: point.Type,
-        }));
-        setIncidentsData(incidents);
-        setFilteredData(incidents);
-        setIsLoading(false);
-        applyFilters();
-      } catch (error) {
-        console.error("Failed to fetch incidents data:", error);
-        setIsLoading(false);
-      }
-    };
-
-    fetchIncidents();
-  }, []);
-
-  // Apply filters whenever filters change
-  useEffect(() => {
-    applyFilters();
-  }, [filters]);
-
-  const applyFilters = () => {
-    const filtered = incidentsData.filter((incident) => {
+  // Apply filters to points
+  const applyFilters = (points: Case[]) => {
+    return points.filter((point) => {
       // Campus filter
-      if (filters.campus !== "All") {
-        const hallData = sampleHallsData.find(
-          (hall) => hall.name === incident.Dorm
+      if (filters.selectedCampus !== "All") {
+        const campusData = campuses.find(
+          (building) => building === point.campus
         );
-        if (!hallData || hallData.location !== filters.campus) return false;
+        if (!campusData || campusData !== filters.selectedCampus) {
+          return false;
+        }
       }
 
       // Month filter
-      if (filters.month !== "All") {
-        const incidentMonth = `${incident.Time.getFullYear()}-${String(
-          incident.Time.getMonth() + 1
+      if (filters.selectedMonth !== "All") {
+        const pointDate = new Date(point.createdAt.toMillis());
+        const pointMonth = `${pointDate.getFullYear()}-${String(
+          pointDate.getMonth() + 1
         ).padStart(2, "0")}`;
-        if (incidentMonth !== filters.month) return false;
+        if (pointMonth !== filters.selectedMonth) {
+          return false;
+        }
       }
 
       // Type filter
-      if (filters.types.length > 0 && !filters.types.includes(incident.Type)) {
+      if (
+        filters.selectedTypes.length > 0 &&
+        !filters.selectedTypes.some((type) => point.offenseTypes.includes(type))
+      ) {
         return false;
       }
 
       return true;
     });
-
-    setFilteredData(filtered);
-    updateMap(filtered);
-    updateStats(filtered);
-    updateResultsSummary(filtered);
   };
 
-  const updateMap = (data: IncidentData[]) => {
-    if (!mapInstanceRef.current) return;
+  // Handle filter changes
+  const handleFilterChange = (
+    filterType: keyof FilterState,
+    value: string | string[] | boolean
+  ) => {
+    setFilters((prev) => ({
+      ...prev,
+      [filterType]: value,
+    }));
+  };
+
+  // Toggle incident type filter
+  const toggleIncidentType = (type: string) => {
+    setFilters((prev) => ({
+      ...prev,
+      selectedTypes: prev.selectedTypes.includes(type)
+        ? prev.selectedTypes.filter((t) => t !== type)
+        : [...prev.selectedTypes, type],
+    }));
+  };
+
+  // Navigate to campus
+  const navigateToCampus = (campus: string) => {
+    if (!mapRef.current) return;
+
+    if (campus === "All") {
+      mapRef.current.setView([41.7002, -86.2379], 15);
+    } else {
+      const campusbuildings = allBuildings.filter(
+        (building) => building.location === campus
+      );
+      if (campusbuildings.length > 0) {
+        const bounds = L.latLngBounds(
+          campusbuildings.map((building) => [
+            building.latitude,
+            building.longitude,
+          ])
+        );
+        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
+      }
+    }
+  };
+
+  useEffect(() => {
+    const getData = async () => {
+      try {
+        const constraints: QueryConstraint[] = [];
+
+        if (filters.selectedCampus !== "All") {
+          constraints.push(where("campus", "==", filters.selectedCampus));
+        }
+        if (filters.selectedMonth !== "All") {
+          constraints.push(where("createdAt", ">=", filters.selectedMonth));
+        }
+
+        const reportsRef = collection(db, "reports");
+        const q = query(reportsRef, ...constraints);
+        const querySnapshot = await getDocs(q);
+        console.log(querySnapshot);
+        querySnapshot.docs.map((doc) => console.log(doc.data()));
+        SetPoints(querySnapshot.docs.map((doc) => doc.data() as Case));
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching incidents:", error);
+        throw new Error("Failed to fetch incident data");
+      }
+    };
+
+    if (!mapRef.current) {
+      mapRef.current = L.map("map", { maxZoom: 19 })
+        .setView([41.7002, -86.2379], 15)
+        .setMinZoom(15)
+        .setMaxBounds([
+          [41.7852, -86.1779],
+          [41.5852, -86.2879],
+        ]);
+
+      new MaptilerLayer({
+        style: "streets-v2",
+        apiKey: import.meta.env.VITE_MAP_KEY,
+      }).addTo(mapRef.current);
+    }
+
+    getData();
+  }, []);
+
+  // Apply filters when filters change
+  useEffect(() => {
+    setFilteredPoints(applyFilters(Points));
+  }, [Points, filters]);
+
+  useEffect(() => {
+    if (!mapRef.current || filteredPoints.length === 0) return;
 
     // Clear existing markers
-    markersRef.current.forEach((marker) => {
-      mapInstanceRef.current!.removeLayer(marker);
-    });
-    markersRef.current = [];
-
-    // Group incidents by location
-    const locationGroups: {
-      [key: string]: {
-        hallData: HallData;
-        incidents: IncidentData[];
-        typeCounts: { [key: number]: number };
-      };
-    } = {};
-
-    data.forEach((incident) => {
-      const hallData = sampleHallsData.find(
-        (hall) => hall.name === incident.Dorm
-      );
-      if (hallData) {
-        if (!locationGroups[incident.Dorm]) {
-          locationGroups[incident.Dorm] = {
-            hallData,
-            incidents: [],
-            typeCounts: { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 },
-          };
-        }
-        locationGroups[incident.Dorm].incidents.push(incident);
-        locationGroups[incident.Dorm].typeCounts[incident.Type]++;
+    mapRef.current.eachLayer((layer) => {
+      if (layer instanceof L.Circle) {
+        mapRef.current!.removeLayer(layer);
       }
     });
 
-    // Create markers
-    Object.values(locationGroups).forEach((group) => {
-      const { hallData, incidents, typeCounts } = group;
+    // Initialize enhanced map points
+    const mapPoints = initializeMapPoints();
 
-      // Calculate marker size based on incident count
-      const totalIncidents = incidents.length;
-      const markerSize = Math.min(totalIncidents * 8 + 20, 80);
-
-      // Determine primary color based on most common incident type
-      const primaryType = Object.entries(typeCounts).reduce((a, b) =>
-        typeCounts[parseInt(a[0])] > typeCounts[parseInt(b[0])] ? a : b
-      )[0];
-      const primaryColor = incidentTypes[parseInt(primaryType)].color;
-
-      // Create incident circle
-      const incidentCircle = L.circle([hallData.latitude, hallData.longitude], {
-        color: primaryColor,
-        fillColor: primaryColor,
-        fillOpacity: 0.6,
-        radius: markerSize,
-        weight: 3,
-      });
-
-      // Create campus indicator
-      let campusColor = "#333333";
-      if (hallData.location === "Notre Dame") campusColor = "#FFD700";
-      else if (hallData.location === "Holy Cross") campusColor = "#ffffff";
-      else if (hallData.location === "Saint Mary's") campusColor = "#87CEEB";
-
-      const campusIndicator = L.circle(
-        [hallData.latitude, hallData.longitude],
-        {
-          fillColor: campusColor,
-          fillOpacity: 0.8,
-          color: campusColor,
-          radius: 12,
-          weight: 2,
+    // Process incidents and build enhanced data
+    filteredPoints.forEach((point) => {
+      try {
+        const buildingName = point.specificLocation;
+        if (mapPoints[buildingName]) {
+          // Update incident counts
+          mapPoints[buildingName].totalIncidents++;
+          point.offenseTypes.forEach((offense: string) => {
+            if (mapPoints[buildingName].incidentCounts[offense] !== undefined) {
+              mapPoints[buildingName].incidentCounts[offense]++;
+            }
+          });
+          // Add to recent incidents (keep last 10)
+          mapPoints[buildingName].recentIncidents.push(point);
+          if (mapPoints[buildingName].recentIncidents.length > 10) {
+            mapPoints[buildingName].recentIncidents.shift();
+          }
         }
-      );
-
-      // Create popup content
-      const popupContent = createPopupContent(hallData, incidents, typeCounts);
-
-      incidentCircle.bindPopup(popupContent, {
-        maxWidth: 350,
-        className: "enhanced-popup",
-      });
-
-      campusIndicator.bindPopup(popupContent, {
-        maxWidth: 350,
-        className: "enhanced-popup",
-      });
-
-      incidentCircle.addTo(mapInstanceRef.current!);
-      campusIndicator.addTo(mapInstanceRef.current!);
-
-      markersRef.current.push(incidentCircle, campusIndicator);
+      } catch (error) {
+        console.warn(
+          `Error processing incident for ${point.specificLocation}:`,
+          error
+        );
+      }
     });
-  };
 
-  const createPopupContent = (
-    hallData: HallData,
-    incidents: IncidentData[],
-    typeCounts: { [key: number]: number }
-  ): string => {
-    const totalIncidents = incidents.length;
+    setEnhancedMapPoints(Object.values(mapPoints));
 
-    // Calculate risk score
+    // Create map markers with enhanced information
+    Object.values(mapPoints).forEach((mapPoint) => {
+      if (mapPoint.totalIncidents > 0) {
+        // Determine circle size based on total incidents
+        const circleSize = Math.min(mapPoint.totalIncidents * 10 + 15, 100);
+
+        // Determine color based on most common incident type
+        const mostCommonType = Object.entries(mapPoint.incidentCounts).sort(
+          ([, a], [, b]) => b - a
+        )[0][0];
+
+        const typeColors: { [key: string]: string } = {
+          "uncomfortable-situation": "#de9e36",
+          "sexual-misconduct": "#ca3c25",
+          "physical-aggression": "#701d52",
+          "verbal-aggression": "#212475",
+          Discrimination: "#1d1a05",
+        };
+
+        const circleColor = typeColors[mostCommonType] || "#666666";
+        // Create main incident circle
+        L.circle(mapPoint.coordinates, {
+          color: circleColor,
+          fillColor: circleColor,
+          fillOpacity: 0.7,
+          radius: circleSize,
+          weight: 2,
+        }).addTo(mapRef.current!);
+
+        // Create detailed popup with enhanced information
+        const popupContent = createEnhancedPopup(mapPoint);
+
+        // Determine campus-based color and border
+        let fillColor = "black";
+        if (mapPoint.location === "Notre Dame") {
+          fillColor = "#FFD700"; // gold
+        } else if (mapPoint.location === "Holy Cross") {
+          fillColor = "#fff";
+        } else if (mapPoint.location === "Saint Mary's") {
+          fillColor = "#87CEEB"; // light blue
+        }
+
+        L.circle(mapPoint.coordinates, {
+          fillColor: fillColor,
+          fillOpacity: 0.5,
+          color: fillColor,
+          radius: 15,
+        })
+          .addTo(mapRef.current!)
+          .bindPopup(popupContent, {
+            maxWidth: 400,
+            className: "enhanced-popup",
+          });
+      }
+    });
+  }, [filteredPoints]);
+
+  const createEnhancedPopup = (mapPoint: EnhancedMapPoint): string => {
+    // Calculate risk score based on recent incidents (last 7 days)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentIncidents = incidents.filter((inc) => inc.Time >= sevenDaysAgo);
 
+    const recentIncidents = mapPoint.recentIncidents.filter(
+      (incident) => new Date(incident.time) >= sevenDaysAgo
+    );
+
+    // Calculate risk score based on number of recent incidents (all types equal)
     let riskScore = 1;
-    let riskClass = "risk-low";
 
-    if (recentIncidents.length >= 5) {
-      riskScore = 5;
-      riskClass = "risk-high";
-    } else if (recentIncidents.length >= 3) {
-      riskScore = 4;
-      riskClass = "risk-high";
-    } else if (recentIncidents.length >= 2) {
-      riskScore = 3;
-      riskClass = "risk-medium-high";
-    } else if (recentIncidents.length >= 1) {
-      riskScore = 2;
-      riskClass = "risk-medium";
-    }
+    // Simple count-based risk scoring (all incident types treated equally)
+    if (recentIncidents.length >= 5) riskScore = 5;
+    else if (recentIncidents.length >= 3) riskScore = 4;
+    else if (recentIncidents.length >= 2) riskScore = 3;
+    else if (recentIncidents.length >= 1) riskScore = 2;
+    else riskScore = 1;
 
-    const typesList = Object.entries(typeCounts)
-      .filter(([, count]) => count > 0)
-      .map(([typeId, count]) => {
-        const type = incidentTypes[parseInt(typeId)];
-        return `
-          <div class="incident-type-item">
-            <div class="type-color-dot" style="background-color: ${type.color}; width: 12px; height: 12px;"></div>
-            <span>${type.name}: ${count}</span>
-          </div>
-        `;
-      })
-      .join("");
+    // Risk color based on score
+    const riskColor =
+      riskScore >= 4
+        ? "#ca3c25" // Red for high risk
+        : riskScore >= 3
+        ? "#de9e36" // Orange for medium-high risk
+        : riskScore >= 2
+        ? "#212475" // Blue for medium risk
+        : "#28a745"; // Green for low risk
+
+    const typeInfo = [
+      { name: "Uncomfortable Situation", color: "#de9e36" },
+      { name: "Sexual Harassment", color: "#ca3c25" },
+      { name: "Physical", color: "#701d52" },
+      { name: "Verbal Aggression", color: "#212475" },
+      { name: "Discrimination", color: "#1d1a05" },
+    ];
 
     return `
-      <div>
-        <h4 class="popup-header">${hallData.name}</h4>
-
-        <div class="popup-section">
-          <div class="popup-label">Location: <span class="popup-value">${
-            hallData.location
-          }</span></div>
-          <div class="popup-label">Type: <span class="popup-value">${
-            hallData.buildingType
-          }</span></div>
+      <div class="enhanced-popup-content">
+        <h3 style="margin: 0 0 10px 0; color: #333;">${
+          mapPoint.buildingName
+        }</h3>
+        
+        <div style="margin-bottom: 10px;">
+          <span style="font-weight: bold; color: #666;">Location:</span> ${
+            mapPoint.location
+          }<br>
+          <span style="font-weight: bold; color: #666;">Building Type:</span> ${
+            mapPoint.buildingType
+          }
         </div>
-
-        <div class="popup-section">
-          <div class="popup-label">Total Reports: <span class="popup-value">${totalIncidents}</span></div>
+        
+        <div style="margin-bottom: 10px;">
+          <span style="font-weight: bold; color: #666;">Total Cases:</span> ${
+            mapPoint.totalIncidents
+          }
         </div>
-
-        <div class="popup-section">
-          <div class="popup-label">Reports by Type:</div>
-          <div class="incident-type-list">${typesList}</div>
+        
+        <div style="margin-bottom: 10px;">
+          <span style="font-weight: bold; color: #666;">Cases by Type:</span><br>
+          ${Object.entries(mapPoint.incidentCounts)
+            .filter(([, count]) => count > 0)
+            .map(([type, count]) => {
+              const typeData = typeInfo.find((t) => t.name === type);
+              if (!typeData) return "";
+              return `<div style="margin: 2px 0; font-size: 12px;">
+                <span style="color: ${typeData.color}; font-weight: bold;">●</span>
+                ${typeData.name}: ${count}
+              </div>`;
+            })
+            .join("")}
         </div>
-
-        <div class="popup-section">
-          <div class="popup-label">Risk Assessment:</div>
-          <div class="risk-score ${riskClass}">
-            ${riskScore}/5 Risk Level
-          </div>
+        
+        <div style="margin-bottom: 10px;">
+          <span style="font-weight: bold; color: #666;">Risk Score:</span> 
+          <span style="color: ${riskColor}; font-weight: bold; font-size: 16px;">
+            ${riskScore}/5
+          </span>
           ${
             recentIncidents.length > 0
-              ? `<div style="font-size: 0.875rem; color: #6c757d; margin-top: 0.5rem;">
-            ${recentIncidents.length} report${
+              ? `<br><span style="font-size: 12px; color: #666;">
+              (${recentIncidents.length} recent case${
                   recentIncidents.length > 1 ? "s" : ""
-                } in last 7 days
-          </div>`
-              : `<div style="font-size: 0.875rem; color: #28a745; margin-top: 0.5rem;">
-            No recent activity
-          </div>`
+                } in last 7 days)
+            </span>`
+              : '<br><span style="font-size: 12px; color: #28a745;">(No recent activity)</span>'
           }
         </div>
       </div>
     `;
   };
 
-  const updateStats = (data: IncidentData[]) => {
-    const totalIncidents = data.length;
-
-    // Count high risk areas (areas with 3+ incidents)
-    const locationCounts: { [key: string]: number } = {};
-    data.forEach((incident) => {
-      locationCounts[incident.Dorm] = (locationCounts[incident.Dorm] || 0) + 1;
-    });
-    const highRiskAreas = Object.values(locationCounts).filter(
-      (count) => count >= 3
-    ).length;
-
-    // Count recent incidents (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    const recentIncidents = data.filter(
-      (incident) => incident.Time >= sevenDaysAgo
-    ).length;
-
-    // Count affected buildings
-    const affectedBuildings = new Set(data.map((incident) => incident.Dorm))
-      .size;
-
-    setStats({
-      totalIncidents,
-      highRiskAreas,
-      recentIncidents,
-      affectedBuildings,
-    });
-  };
-
-  const updateResultsSummary = (data: IncidentData[]) => {
-    // This would update a summary display if needed
-  };
-
-  const handleCampusFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const campus = e.target.value;
-    setFilters((prev) => ({ ...prev, campus }));
-    if (campus !== "All") {
-      navigateToCampus(campus);
-    }
-  };
-
-  const handleMonthFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    setFilters((prev) => ({ ...prev, month: e.target.value }));
-  };
-
-  const handleTypeFilter = (typeId: number, checked: boolean) => {
-    setFilters((prev) => ({
-      ...prev,
-      types: checked
-        ? [...prev.types, typeId]
-        : prev.types.filter((id) => id !== typeId),
-    }));
-  };
-
-  const clearAllFilters = () => {
-    setFilters({ campus: "All", month: "All", types: [] });
-  };
-
-  const navigateToCampus = (campus: string) => {
-    if (!mapInstanceRef.current) return;
-
-    if (campus === "All") {
-      mapInstanceRef.current.setView([41.7002, -86.2379], 15);
-    } else {
-      const campusHalls = sampleHallsData.filter(
-        (hall) => hall.location === campus
-      );
-      if (campusHalls.length > 0) {
-        const bounds = L.latLngBounds(
-          campusHalls.map((hall) => [hall.latitude, hall.longitude])
-        );
-        mapInstanceRef.current.fitBounds(bounds, { padding: [50, 50] });
-      }
-    }
-  };
-
-  const toggleFilterPanel = () => {
-    setFilterPanelOpen(!filterPanelOpen);
-  };
-
-  const closeFilterPanel = () => {
-    setFilterPanelOpen(false);
-  };
-
   return (
-    <div className="app-container">
-      {/* Header */}
-      <header className="header">
-        <div className="logo-section">
-          <div className="logo">R</div>
-          <span className="brand-text">RedReport</span>
-        </div>
-        <div className="header-actions">
-          <a href="#" className="btn btn-secondary">
-            <i className="fas fa-question-circle"></i>
-            Help
-          </a>
-          <a href="#" className="btn btn-primary">
-            <i className="fas fa-arrow-left"></i>
-            Back to Dashboard
-          </a>
-        </div>
-      </header>
+    <div className="fullscreen-map-container">
+      {/* Filter Menu */}
+      <div className={`map-filter-menu m-2`}>
+        <button
+          className="menu-toggle-btn"
+          onClick={() => handleFilterChange("showMenu", !filters.showMenu)}
+        >
+          {filters.showMenu ? "✕" : "☰"}
+        </button>
 
-      {/* Filter Toggle Button */}
-      <button className="filter-toggle" onClick={toggleFilterPanel}>
-        <i className="fas fa-filter"></i>
-      </button>
+        {/* Only show filter content if menu is open */}
+        {filters.showMenu && (
+          <div className="filter-content">
+            <h3>Map Filters</h3>
 
-      {/* Filter Panel */}
-      <div className={`filter-panel ${filterPanelOpen ? "open" : ""}`}>
-        <div className="filter-header">
-          <h3 className="filter-title">Map Filters</h3>
-          <button className="filter-close" onClick={closeFilterPanel}>
-            <i className="fas fa-times"></i>
-          </button>
-        </div>
-        <div className="filter-content">
-          {/* Campus Filter */}
-          <div className="filter-section">
-            <label className="filter-label">Campus</label>
-            <select
-              className="filter-select"
-              value={filters.campus}
-              onChange={handleCampusFilter}
+            {/* Campus Filter */}
+            <div className="filter-section">
+              <label>Campus:</label>
+              <select
+                value={filters.selectedCampus}
+                onChange={(e) => {
+                  handleFilterChange("selectedCampus", e.target.value);
+                  navigateToCampus(e.target.value);
+                }}
+              >
+                {campuses.map((campus) => (
+                  <option key={campus.toString()} value={campus.toString()}>
+                    {campus.toString()}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Month Filter */}
+            <div className="filter-section">
+              <label>Month:</label>
+              <select
+                value={filters.selectedMonth}
+                onChange={(e) =>
+                  handleFilterChange("selectedMonth", e.target.value)
+                }
+              >
+                {getAvailableMonths().map((month) => (
+                  <option key={month} value={month}>
+                    {month === "All" ? "All Time" : month}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Incident Type Filter */}
+            <div className="filter-section">
+              <label>Incident Types:</label>
+              <div className="type-filters">
+                {incidentTypes.map((type) => (
+                  <label
+                    key={type.name}
+                    className="type-checkbox custom-circle-checkbox"
+                    style={{ cursor: "pointer" }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={filters.selectedTypes.includes(type.name)}
+                      onChange={() => toggleIncidentType(type.name)}
+                      style={{ display: "none" }}
+                    />
+                    <span
+                      className={`type-color-dot-circle ${
+                        filters.selectedTypes.includes(type.name)
+                          ? "selected"
+                          : ""
+                      }`}
+                      style={{
+                        backgroundColor: type.color,
+                        borderColor: type.color,
+                      }}
+                    >
+                      {filters.selectedTypes.includes(type.name) && (
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 16 16"
+                          style={{
+                            display: "block",
+                            margin: "auto",
+                          }}
+                        >
+                          <circle
+                            cx="13"
+                            cy="13"
+                            r="10"
+                            fill="#fff"
+                            opacity="0.8"
+                          />
+                        </svg>
+                      )}
+                    </span>
+                    <span style={{ marginLeft: 8 }}>{type.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            {/* Clear Filters */}
+            <button
+              className="clear-filters-btn"
+              onClick={() =>
+                setFilters({
+                  selectedCampus: "All",
+                  selectedMonth: "All",
+                  selectedTypes: [],
+                  showMenu: filters.showMenu,
+                })
+              }
             >
-              <option value="All">All Campuses</option>
-              <option value="Notre Dame">Notre Dame</option>
-              <option value="Holy Cross">Holy Cross</option>
-              <option value="Saint Mary's">Saint Mary's</option>
-            </select>
-          </div>
-
-          {/* Month Filter */}
-          <div className="filter-section">
-            <label className="filter-label">Time Period</label>
-            <select
-              className="filter-select"
-              value={filters.month}
-              onChange={handleMonthFilter}
-            >
-              <option value="All">All Time</option>
-              <option value="2024-12">December 2024</option>
-              <option value="2024-11">November 2024</option>
-              <option value="2024-10">October 2024</option>
-              <option value="2024-09">September 2024</option>
-            </select>
-          </div>
-
-          {/* Incident Type Filter */}
-          <div className="filter-section">
-            <label className="filter-label">Incident Types</label>
-            <div className="type-filters">
-              {incidentTypes.map((type) => (
-                <label key={type.id} className="type-checkbox">
-                  <input
-                    type="checkbox"
-                    value={type.id}
-                    style={{ display: "none" }}
-                    checked={filters.types.includes(type.id)}
-                    onChange={(e) =>
-                      handleTypeFilter(type.id, e.target.checked)
-                    }
-                  />
-                  <div
-                    className={`type-color-dot ${
-                      filters.types.includes(type.id) ? "selected" : ""
-                    }`}
-                    style={{ backgroundColor: type.color }}
-                  ></div>
-                  <span>{type.name}</span>
-                </label>
-              ))}
+              Clear All Filters
+            </button>
+            {/* Results Summary */}
+            <div className="results-summary">
+              <p>Showing {filteredPoints.length} incidents</p>
+              {filters.selectedCampus !== "All" && (
+                <p>Campus: {filters.selectedCampus}</p>
+              )}
+              {filters.selectedMonth !== "All" && (
+                <p>Period: {filters.selectedMonth}</p>
+              )}
+              {filters.selectedTypes.length > 0 && (
+                <p>
+                  Types:{" "}
+                  {filters.selectedTypes
+                    .map((id) => incidentTypes.find((t) => t.name === id)?.name)
+                    .join(", ")}
+                </p>
+              )}
             </div>
           </div>
+        )}
+      </div>
 
-          {/* Clear Filters Button */}
-          <button
-            className="btn btn-secondary"
-            onClick={clearAllFilters}
-            style={{ width: "100%", justifyContent: "center" }}
-          >
-            <i className="fas fa-undo"></i>
-            Clear All Filters
+      {/* Back Button */}
+      <div>
+        <a href="../" className="back-button">
+          <button className="option abs right small">Back</button>
+        </a>
+        <a
+          data-az-l="1e9e1abc-2335-4838-949d-8ab8af0dd8c9"
+          className="back-button"
+        >
+          <button className="option abs right mt-5 small">
+            Leave Feedback
           </button>
-
-          {/* Results Summary */}
-          <div className="results-summary">
-            <p>
-              <strong>Showing {filteredData.length} incidents</strong>
-            </p>
-            {filters.campus !== "All" && <p>Campus: {filters.campus}</p>}
-            {filters.month !== "All" && <p>Period: {filters.month}</p>}
-            {filters.types.length > 0 && (
-              <p>
-                Types:{" "}
-                {filters.types
-                  .map((id) => incidentTypes.find((t) => t.id === id)?.name)
-                  .join(", ")}
-              </p>
-            )}
-          </div>
-        </div>
-      </div>
-
-      {/* Map Container */}
-      <div className="map-container">
-        <div id="map" ref={mapRef}></div>
-      </div>
-
-      {/* Stats Panel */}
-      <div className="stats-panel">
-        <h4 className="stats-title">Campus Safety Overview</h4>
-        <div className="stats-grid">
-          <div className="stat-item">
-            <span className="stat-number">{stats.totalIncidents}</span>
-            <span className="stat-label">Total Reports</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.highRiskAreas}</span>
-            <span className="stat-label">High Risk Areas</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.recentIncidents}</span>
-            <span className="stat-label">This Week</span>
-          </div>
-          <div className="stat-item">
-            <span className="stat-number">{stats.affectedBuildings}</span>
-            <span className="stat-label">Buildings</span>
-          </div>
-        </div>
+        </a>
       </div>
 
       {/* Loading Overlay */}
-      {isLoading && (
+      {loading && (
         <div className="loading-overlay">
-          <div className="loading-content">
-            <div className="spinner"></div>
-            <p>Loading campus safety data...</p>
-          </div>
+          <div className="loading-content">Loading incident data...</div>
         </div>
       )}
+
+      {/* Error Overlay */}
+      {error && <div className="error-overlay">{error}</div>}
+
+      {/* Map Container */}
+      <div id="map" className="fullscreen-map"></div>
     </div>
   );
-};
+}
 
 export default Map;
