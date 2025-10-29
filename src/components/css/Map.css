@@ -46,6 +46,9 @@
   position: absolute;
   vertical-align: text-top;
 }
+.z-front {
+  z-index: 1001;
+}
 /* Margin */
 .m-1 {
   margin: 10px;
@@ -56,8 +59,8 @@
 .mt-2 {
   margin-top: 20px;
 }
-.mt-5 {
-  margin-top: 10vh;
+.mt-4 {
+  margin-top: 80px;
 }
 .mr-5 {
   margin-right: 100px !important;
@@ -275,19 +278,20 @@ h6 {
 }
 
 /* Filter Menu Styles */
+.map-filter {
+  position: absolute;
+  top: 40px;
+  left: 20px;
+  max-width: 350px;
+  min-width: 300px;
+}
 .map-filter-menu {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  z-index: 1001;
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
   transition: all 0.3s ease;
-  max-width: 350px;
-  min-width: 300px;
 }
 
 .menu-toggle-btn {
@@ -346,17 +350,6 @@ h6 {
   font-size: 13px;
   color: var(--text-color);
   transition: color 0.3s ease;
-}
-
-.type-checkbox:hover {
-  color: var(--accent-color);
-}
-
-.type-checkbox input[type="checkbox"] {
-  width: 16px;
-  height: 16px;
-  margin: 0;
-  accent-color: var(--accent-color);
 }
 
 .type-color-dot {

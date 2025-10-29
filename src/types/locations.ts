@@ -223,7 +223,7 @@ export const BuildingDirectory = [
         {
           name: "Mendoza College of Business",
           latitude: 41.6970083,
-          longitude: -86.2346583,
+          longitude: -86.23615,
           id: "mendoza-college-of-business",
           type: "Academic Buildings",
           location: "Notre Dame",

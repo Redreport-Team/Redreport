@@ -1,4 +1,4 @@
-import L from "leaflet";
+import L, { Point } from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
@@ -24,19 +24,14 @@ interface Case {
   additionalInfo: string;
 }
 
-interface MapProps {
-  reports?: Case[];
-  onReportClick?: (report: Case) => void;
-}
-
-interface EnhancedMapPoint {
+interface MapPoint {
   buildingName: string;
   coordinates: [number, number];
   totalIncidents: number;
   incidentCounts: {
     [key: string]: number; // Type -> Count
   };
-  location: string;
+  campus: string;
   buildingType: string;
   recentIncidents: Case[];
 }
@@ -48,12 +43,20 @@ interface FilterState {
   showMenu: boolean;
 }
 
-function Map({ reports = [], onReportClick }: MapProps) {
+// Incident type options
+const incidentTypes = [
+  { id: 0, name: "uncomfortable-situation", color: "#de9e36" },
+  { id: 1, name: "sexual-misconduct", color: "#ca3c25" },
+  { id: 2, name: "physical-aggression", color: "#701d52" },
+  { id: 3, name: "verbal-aggression", color: "#212475" },
+  { id: 4, name: "discrimination", color: "#1d1a05" },
+];
+
+function Map() {
   const [Points, SetPoints] = useState<Case[]>([]);
-  const [filteredPoints, setFilteredPoints] = useState<Case[]>([]);
-  const [enhancedMapPoints, setEnhancedMapPoints] = useState<
-    EnhancedMapPoint[]
-  >([]);
+  const [MapPoints, setMapPoints] = useState<{
+    [key: string]: MapPoint;
+  }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
@@ -62,15 +65,201 @@ function Map({ reports = [], onReportClick }: MapProps) {
     selectedTypes: [],
     showMenu: false,
   });
-  const mapRef = useRef<L.Map | null>(null);
 
-  // Get available months from data
+  // References to keep track of map components
+  const mapRef = useRef<L.Map | null>(null);
+  const circlesRef = useRef<L.LayerGroup | null>(null);
+
+  // Initiate Map
+  useEffect(() => {
+    // Fetch Data from Firebase and set it as <Point> type
+    const getData = async () => {
+      try {
+        const reportsRef = collection(db, "reports");
+        const q = query(reportsRef);
+        const querySnapshot = await getDocs(q);
+        console.log(
+          "Firebase Points: ",
+          querySnapshot.docs.map((doc) => doc.data() as Case)
+        );
+        SetPoints(querySnapshot.docs.map((doc) => doc.data() as Case));
+        setLoading(false);
+      } catch (error) {
+        console.error("Error fetching incidents:", error);
+        setError("Failed to fetch incident data");
+        setLoading(false);
+      }
+    };
+    // Call above function
+    getData();
+
+    // Set up Map using MapTilerSDK and Leaflet
+    if (!mapRef.current) {
+      mapRef.current = L.map("map", { maxZoom: 19 })
+        .setView([41.7002, -86.2379], 15)
+        .setMinZoom(15)
+        .setMaxBounds([
+          [41.7852, -86.1779],
+          [41.5852, -86.2879],
+        ]);
+
+      new MaptilerLayer({
+        style: "streets-v2",
+        apiKey: import.meta.env.VITE_MAP_KEY,
+      }).addTo(mapRef.current);
+
+      circlesRef.current = L.layerGroup().addTo(mapRef.current!);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Start displaying MapPoints on Map
+    initializeMapPoints();
+  }, [Points, filters]);
+
+  // Convert points from Firebase : <Case> into complete <MapPoints> with firebase.ts
+  const MapPointConversion = () => {
+    const TempMapPoints: { [key: string]: MapPoint } = {};
+    // Get points that fit filter criteria
+    const filteredPoints = applyFilters(Points);
+    filteredPoints.forEach((point) => {
+      // Find the building in allBuildings with the same specificLocation name
+      const location = allBuildings.find(
+        (building: any) => building.name === point.specificLocation
+      );
+
+      // Incident types
+      const TempIncidentCounts: { [key: string]: number } = {
+        "uncomfortable-situation": 0,
+        "sexual-misconduct": 0,
+        "physical-aggression": 0,
+        "verbal-aggression": 0,
+        discrimination: 0,
+      };
+      const totalIncidents = location?.totalIncidents + 1 || 1;
+      const incidentCounts: { [key: string]: number } = {
+        ...TempIncidentCounts,
+      };
+      if (point.offenseTypes) {
+        point.offenseTypes.forEach((type) => {
+          if (incidentCounts[type] !== undefined) {
+            incidentCounts[type] += 1;
+          } else {
+            incidentCounts[type] = 1;
+          }
+        });
+      }
+
+      // Key properties from Case and building
+      const buildingName =
+        point.specificLocation || location?.name || "Unknown Location";
+
+      const coordinates: [number, number] =
+        location &&
+        typeof location.latitude === "number" &&
+        typeof location.longitude === "number"
+          ? [location.latitude, location.longitude]
+          : [0, 0];
+      const campus = point.campus || location?.campus || "Unknown Campus";
+      const buildingType =
+        location?.type || location?.buildingType || "Unknown Type";
+      const recentIncidents = [point];
+      console.log(
+        "Individual TempMapPoint: ",
+        (TempMapPoints[buildingName] = {
+          buildingName,
+          coordinates,
+          totalIncidents,
+          incidentCounts,
+          campus,
+          buildingType,
+          recentIncidents,
+        })
+      );
+      TempMapPoints[buildingName] = {
+        buildingName,
+        coordinates,
+        totalIncidents,
+        incidentCounts,
+        campus,
+        buildingType,
+        recentIncidents,
+      };
+    });
+    console.log("TempMapPoints: ", TempMapPoints);
+    setMapPoints(TempMapPoints);
+    return TempMapPoints;
+  };
+
+  // Add individual MapPoints to the Map as circles
+  const initializeMapPoints = () => {
+    const CurrentMapPoints = MapPointConversion();
+
+    // Clear any circles present
+    if (circlesRef.current) circlesRef.current?.clearLayers();
+
+    Object.values(CurrentMapPoints).forEach((mapPoint) => {
+      if (mapPoint.totalIncidents > 0) {
+        // Determine circle size based on total incidents
+        const circleSize = Math.min(mapPoint.totalIncidents * 10 + 15, 100);
+
+        // Determine color based on most common incident type
+        const mostCommonType = Object.entries(mapPoint.incidentCounts).sort(
+          ([, a], [, b]) => b - a
+        )[0][0];
+
+        const typeColors: { [key: string]: string } = {
+          "uncomfortable-situation": "#de9e36",
+          "sexual-misconduct": "#ca3c25",
+          "physical-aggression": "#701d52",
+          "verbal-aggression": "#212475",
+          discrimination: "#1d1a05",
+        };
+
+        const circleColor = typeColors[mostCommonType] || "#666666";
+        // Create main incident circle
+        L.circle(mapPoint.coordinates, {
+          color: circleColor,
+          fillColor: circleColor,
+          fillOpacity: 0.7,
+          radius: circleSize,
+          weight: 2,
+        }).addTo(circlesRef.current!);
+
+        // Create detailed popup with enhanced information
+        const popupContent = createEnhancedPopup(mapPoint);
+
+        // Determine color and border of inner circle based on campus
+        let fillColor = "black";
+        if (mapPoint.campus == "Notre-Dame") {
+          fillColor = "#FFD700";
+        } else if (mapPoint.campus == "Holy-Cross") {
+          fillColor = "#fff";
+        } else if (mapPoint.campus == "Saint-Marys") {
+          fillColor = "#87CEEB";
+        }
+
+        L.circle(mapPoint.coordinates, {
+          fillColor: fillColor,
+          fillOpacity: 0.5,
+          color: fillColor,
+          stroke: false,
+          radius: 15,
+        })
+          .addTo(circlesRef.current!)
+          .bindPopup(popupContent, {
+            maxWidth: 400,
+            className: "enhanced-popup",
+          });
+      }
+    });
+  };
+
+  // Get available months from data for FilterMenu
   const getAvailableMonths = () => {
-    console.log("months");
     const months = new Set<string>();
     Points.forEach((point) => {
       const date = new Date(point.createdAt.toMillis());
-      console.log(date);
       const monthYear = `${date.getFullYear()}-${String(
         date.getMonth() + 1
       ).padStart(2, "0")}`;
@@ -79,41 +268,62 @@ function Map({ reports = [], onReportClick }: MapProps) {
     return ["All", ...Array.from(months).sort().reverse()];
   };
 
-  // Incident type options
-  const incidentTypes = [
-    { id: 0, name: "uncomfortable-situation", color: "#de9e36" },
-    { id: 1, name: "sexual-misconduct", color: "#ca3c25" },
-    { id: 2, name: "physical-aggression", color: "#701d52" },
-    { id: 3, name: "verbal-aggression", color: "#212475" },
-    { id: 4, name: "discrimination", color: "#1d1a05" },
-  ];
+  function getEstimatedDays(report: Case): number {
+    const reportTime = report.createdAt.toMillis();
+    const today = Date.now();
+    const day = 24 * 60 * 60 * 1000;
 
-  // Convert building data to map format with enhanced information
-  const initializeMapPoints = (): { [key: string]: EnhancedMapPoint } => {
-    const mapPoints: { [key: string]: EnhancedMapPoint } = {};
+    let estimatedDays = 0;
+    // Calculate time since Report was made
+    let daysSinceReport = today - reportTime;
 
-    allBuildings.forEach((building) => {
-      mapPoints[building.name] = {
-        buildingName: building.name,
-        coordinates: [building.latitude, building.longitude],
-        totalIncidents: 0,
-        incidentCounts: {
-          "uncomfortable-situation": 0,
-          "sexual-misconduct": 0,
-          "physical-aggression": 0,
-          "verbal-aggression": 0,
-          discrimination: 0,
-        },
-        buildingType: building.type,
-        location: building.location,
-        recentIncidents: [],
-      };
-    });
+    // Caclulate time since agression occured
+    switch (report.time) {
+      case "within-24-hours":
+        estimatedDays = (daysSinceReport + day / 2) / day;
+        break;
+      case "within-week":
+        estimatedDays = (daysSinceReport + day * 3.5) / day;
+        break;
+      case "within-month":
+        estimatedDays = (daysSinceReport + day * 15) / day;
+        break;
+      case "longer-ago":
+        estimatedDays = (daysSinceReport + day * 45) / day;
+        break;
+    }
+    return estimatedDays;
+  }
+  function calculateRiskScore(reports: Case[]): [number, number] {
+    let totalPoints = 0;
+    let recentCases = 0;
 
-    return mapPoints;
-  };
+    // X = Amount of reports in the last 3 days considered CRITICAL
+    const maxPointsThreshold = 12.0;
 
-  // Apply filters to points
+    for (const report of reports) {
+      const estimatedAggressionTime = getEstimatedDays(report);
+
+      if (estimatedAggressionTime < 7) recentCases++;
+
+      // x report in 3 days is critical
+      // As days pass the weight of each report on the risk score decreases hyperbolically
+      const recencyWeight = Math.min((3 / estimatedAggressionTime) * 2, 2);
+
+      totalPoints += recencyWeight;
+    }
+
+    if (totalPoints === 0) {
+      return [1.0, 0];
+    }
+
+    let score = 10.0 + (totalPoints / maxPointsThreshold) * 40.0;
+
+    score = Math.min(score, 50.0);
+
+    return [Math.round(score) / 10, recentCases];
+  }
+
   const applyFilters = (points: Case[]) => {
     return points.filter((point) => {
       // Campus filter
@@ -192,171 +402,10 @@ function Map({ reports = [], onReportClick }: MapProps) {
     }
   };
 
-  useEffect(() => {
-    const getData = async () => {
-      try {
-        const constraints: QueryConstraint[] = [];
-
-        if (filters.selectedCampus !== "All") {
-          constraints.push(where("campus", "==", filters.selectedCampus));
-        }
-        if (filters.selectedMonth !== "All") {
-          constraints.push(where("createdAt", ">=", filters.selectedMonth));
-        }
-
-        const reportsRef = collection(db, "reports");
-        const q = query(reportsRef, ...constraints);
-        const querySnapshot = await getDocs(q);
-        console.log(querySnapshot);
-        querySnapshot.docs.map((doc) => console.log(doc.data()));
-        SetPoints(querySnapshot.docs.map((doc) => doc.data() as Case));
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching incidents:", error);
-        throw new Error("Failed to fetch incident data");
-      }
-    };
-
-    if (!mapRef.current) {
-      mapRef.current = L.map("map", { maxZoom: 19 })
-        .setView([41.7002, -86.2379], 15)
-        .setMinZoom(15)
-        .setMaxBounds([
-          [41.7852, -86.1779],
-          [41.5852, -86.2879],
-        ]);
-
-      new MaptilerLayer({
-        style: "streets-v2",
-        apiKey: import.meta.env.VITE_MAP_KEY,
-      }).addTo(mapRef.current);
-    }
-
-    getData();
-  }, []);
-
-  // Apply filters when filters change
-  useEffect(() => {
-    setFilteredPoints(applyFilters(Points));
-  }, [Points, filters]);
-
-  useEffect(() => {
-    if (!mapRef.current || filteredPoints.length === 0) return;
-
-    // Clear existing markers
-    mapRef.current.eachLayer((layer) => {
-      if (layer instanceof L.Circle) {
-        mapRef.current!.removeLayer(layer);
-      }
-    });
-
-    // Initialize enhanced map points
-    const mapPoints = initializeMapPoints();
-
-    // Process incidents and build enhanced data
-    filteredPoints.forEach((point) => {
-      try {
-        const buildingName = point.specificLocation;
-        if (mapPoints[buildingName]) {
-          // Update incident counts
-          mapPoints[buildingName].totalIncidents++;
-          point.offenseTypes.forEach((offense: string) => {
-            if (mapPoints[buildingName].incidentCounts[offense] !== undefined) {
-              mapPoints[buildingName].incidentCounts[offense]++;
-            }
-          });
-          // Add to recent incidents (keep last 10)
-          mapPoints[buildingName].recentIncidents.push(point);
-          if (mapPoints[buildingName].recentIncidents.length > 10) {
-            mapPoints[buildingName].recentIncidents.shift();
-          }
-        }
-      } catch (error) {
-        console.warn(
-          `Error processing incident for ${point.specificLocation}:`,
-          error
-        );
-      }
-    });
-
-    setEnhancedMapPoints(Object.values(mapPoints));
-
-    // Create map markers with enhanced information
-    Object.values(mapPoints).forEach((mapPoint) => {
-      if (mapPoint.totalIncidents > 0) {
-        // Determine circle size based on total incidents
-        const circleSize = Math.min(mapPoint.totalIncidents * 10 + 15, 100);
-
-        // Determine color based on most common incident type
-        const mostCommonType = Object.entries(mapPoint.incidentCounts).sort(
-          ([, a], [, b]) => b - a
-        )[0][0];
-
-        const typeColors: { [key: string]: string } = {
-          "uncomfortable-situation": "#de9e36",
-          "sexual-misconduct": "#ca3c25",
-          "physical-aggression": "#701d52",
-          "verbal-aggression": "#212475",
-          Discrimination: "#1d1a05",
-        };
-
-        const circleColor = typeColors[mostCommonType] || "#666666";
-        // Create main incident circle
-        L.circle(mapPoint.coordinates, {
-          color: circleColor,
-          fillColor: circleColor,
-          fillOpacity: 0.7,
-          radius: circleSize,
-          weight: 2,
-        }).addTo(mapRef.current!);
-
-        // Create detailed popup with enhanced information
-        const popupContent = createEnhancedPopup(mapPoint);
-
-        // Determine campus-based color and border
-        let fillColor = "black";
-        if (mapPoint.location === "Notre Dame") {
-          fillColor = "#FFD700"; // gold
-        } else if (mapPoint.location === "Holy Cross") {
-          fillColor = "#fff";
-        } else if (mapPoint.location === "Saint Mary's") {
-          fillColor = "#87CEEB"; // light blue
-        }
-
-        L.circle(mapPoint.coordinates, {
-          fillColor: fillColor,
-          fillOpacity: 0.5,
-          color: fillColor,
-          radius: 15,
-        })
-          .addTo(mapRef.current!)
-          .bindPopup(popupContent, {
-            maxWidth: 400,
-            className: "enhanced-popup",
-          });
-      }
-    });
-  }, [filteredPoints]);
-
-  const createEnhancedPopup = (mapPoint: EnhancedMapPoint): string => {
-    // Calculate risk score based on recent incidents (last 7 days)
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
-    const recentIncidents = mapPoint.recentIncidents.filter(
-      (incident) => new Date(incident.time) >= sevenDaysAgo
+  const createEnhancedPopup = (mapPoint: MapPoint): string => {
+    const [riskScore, recentCases] = calculateRiskScore(
+      mapPoint.recentIncidents
     );
-
-    // Calculate risk score based on number of recent incidents (all types equal)
-    let riskScore = 1;
-
-    // Simple count-based risk scoring (all incident types treated equally)
-    if (recentIncidents.length >= 5) riskScore = 5;
-    else if (recentIncidents.length >= 3) riskScore = 4;
-    else if (recentIncidents.length >= 2) riskScore = 3;
-    else if (recentIncidents.length >= 1) riskScore = 2;
-    else riskScore = 1;
-
     // Risk color based on score
     const riskColor =
       riskScore >= 4
@@ -368,11 +417,11 @@ function Map({ reports = [], onReportClick }: MapProps) {
         : "#28a745"; // Green for low risk
 
     const typeInfo = [
-      { name: "Uncomfortable Situation", color: "#de9e36" },
-      { name: "Sexual Harassment", color: "#ca3c25" },
-      { name: "Physical", color: "#701d52" },
-      { name: "Verbal Aggression", color: "#212475" },
-      { name: "Discrimination", color: "#1d1a05" },
+      { name: "uncomfortable-situation", color: "#de9e36" },
+      { name: "sexual-misconduct", color: "#ca3c25" },
+      { name: "physical-aggression", color: "#701d52" },
+      { name: "verbal-aggression", color: "#212475" },
+      { name: "discrimination", color: "#1d1a05" },
     ];
 
     return `
@@ -382,8 +431,8 @@ function Map({ reports = [], onReportClick }: MapProps) {
         }</h3>
         
         <div style="margin-bottom: 10px;">
-          <span style="font-weight: bold; color: #666;">Location:</span> ${
-            mapPoint.location
+          <span style="font-weight: bold; color: #666;">Campus:</span> ${
+            mapPoint.campus
           }<br>
           <span style="font-weight: bold; color: #666;">Building Type:</span> ${
             mapPoint.buildingType
@@ -397,15 +446,18 @@ function Map({ reports = [], onReportClick }: MapProps) {
         </div>
         
         <div style="margin-bottom: 10px;">
-          <span style="font-weight: bold; color: #666;">Cases by Type:</span><br>
+          <span style="font-weight: bold; color: #666;">Types of Aggressions:</span><br>
           ${Object.entries(mapPoint.incidentCounts)
             .filter(([, count]) => count > 0)
             .map(([type, count]) => {
               const typeData = typeInfo.find((t) => t.name === type);
               if (!typeData) return "";
+              const displayName = typeData.name
+                .replace(/-/g, " ")
+                .replace(/\b\w/g, (l) => l.toUpperCase());
               return `<div style="margin: 2px 0; font-size: 12px;">
                 <span style="color: ${typeData.color}; font-weight: bold;">●</span>
-                ${typeData.name}: ${count}
+                ${displayName}: ${count}
               </div>`;
             })
             .join("")}
@@ -417,10 +469,10 @@ function Map({ reports = [], onReportClick }: MapProps) {
             ${riskScore}/5
           </span>
           ${
-            recentIncidents.length > 0
+            recentCases > 0
               ? `<br><span style="font-size: 12px; color: #666;">
-              (${recentIncidents.length} recent case${
-                  recentIncidents.length > 1 ? "s" : ""
+              (${recentCases} recent case${
+                  recentCases > 1 ? "s" : ""
                 } in last 7 days)
             </span>`
               : '<br><span style="font-size: 12px; color: #28a745;">(No recent activity)</span>'
@@ -433,16 +485,15 @@ function Map({ reports = [], onReportClick }: MapProps) {
   return (
     <div className="fullscreen-map-container">
       {/* Filter Menu */}
-      <div className={`map-filter-menu m-2`}>
-        <button
-          className="menu-toggle-btn"
-          onClick={() => handleFilterChange("showMenu", !filters.showMenu)}
+      <div className="map-filter z-front">
+        <div
+          className="map-filter-menu m-2"
+          style={{
+            zIndex: filters.showMenu ? 1001 : -1,
+            opacity: filters.showMenu ? 1 : 0,
+          }}
         >
-          {filters.showMenu ? "✕" : "☰"}
-        </button>
-
-        {/* Only show filter content if menu is open */}
-        {filters.showMenu && (
+          {/* Only show filter content if menu is open */}
           <div className="filter-content">
             <h3>Map Filters</h3>
 
@@ -455,6 +506,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
                   handleFilterChange("selectedCampus", e.target.value);
                   navigateToCampus(e.target.value);
                 }}
+                className="form-select"
               >
                 {campuses.map((campus) => (
                   <option key={campus.toString()} value={campus.toString()}>
@@ -472,6 +524,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
                 onChange={(e) =>
                   handleFilterChange("selectedMonth", e.target.value)
                 }
+                className="form-select"
               >
                 {getAvailableMonths().map((month) => (
                   <option key={month} value={month}>
@@ -549,7 +602,7 @@ function Map({ reports = [], onReportClick }: MapProps) {
             </button>
             {/* Results Summary */}
             <div className="results-summary">
-              <p>Showing {filteredPoints.length} incidents</p>
+              <p>Showing {Object.values(MapPoints).length} incidents</p>
               {filters.selectedCampus !== "All" && (
                 <p>Campus: {filters.selectedCampus}</p>
               )}
@@ -566,21 +619,24 @@ function Map({ reports = [], onReportClick }: MapProps) {
               )}
             </div>
           </div>
-        )}
+        </div>
+        <button
+          className="menu-toggle-btn"
+          onClick={() => handleFilterChange("showMenu", !filters.showMenu)}
+        >
+          {filters.showMenu ? "✕" : "☰"}
+        </button>
       </div>
-
       {/* Back Button */}
-      <div>
-        <a href="../" className="back-button">
-          <button className="option abs right small">Back</button>
+      <div className="form-group abs right ">
+        <a href="../" className="back-button form-btn">
+          <button className=" small">Back</button>
         </a>
         <a
           data-az-l="1e9e1abc-2335-4838-949d-8ab8af0dd8c9"
-          className="back-button"
+          className="back-button form-btn mt-4"
         >
-          <button className="option abs right mt-5 small">
-            Leave Feedback
-          </button>
+          <button className=" small">Leave Feedback</button>
         </a>
       </div>
 

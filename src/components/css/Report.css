@@ -152,7 +152,8 @@ body {
 .form-group select,
 .form-group input,
 .form-group textarea,
-.form-select {
+.form-select,
+.form-btn {
   width: 100%;
   padding: 1rem;
   border: 2px solid rgba(17, 48, 82, 0.2);
@@ -163,12 +164,24 @@ body {
   background: white;
   color: #113052;
 }
+.form-btn button {
+  background-color: transparent;
+  color: black;
+  outline: none;
+  border: none;
+}
 .form-group div {
   width: 100%;
 }
+.form-group a {
+  width: calc(3rem + 20vw);
+  height: 3.7rem;
+}
 .form-group select:focus,
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-btn:focus,
+.form-btn:hover {
   outline: none;
   border-color: #d82f25;
   box-shadow: 0 0 0 3px rgba(216, 47, 37, 0.1);

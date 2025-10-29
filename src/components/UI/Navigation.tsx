@@ -25,6 +25,11 @@ const Navigation: React.FC = () => {
                 REPORT
               </a>
             </li>
+            <li>
+              <a href="/map" className="map-btn">
+                MAP
+              </a>
+            </li>
           </ul>
         </div>
       </nav>

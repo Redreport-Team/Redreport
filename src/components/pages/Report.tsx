@@ -451,7 +451,7 @@ const Report: React.FC = () => {
                         onChange={handleCheckboxChange}
                       />
                       <div className="checkbox-content">
-                        <strong>Unconsented Contact</strong>
+                        <strong>Sexual Misconduct</strong>
                         <small>Physical contact without permission</small>
                       </div>
                     </label>

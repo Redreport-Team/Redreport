@@ -49,9 +49,18 @@ nav {
   transition: all 0.3s ease;
   box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
 }
+.map-btn {
+  background: white;
+  color: #d82f25 !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 25px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
+}
 
 .report-btn:hover {
-  background: #b82620;
+  background: #e03731;
   transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(216, 47, 37, 0.4);
 }
