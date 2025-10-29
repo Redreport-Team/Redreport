@@ -1,12 +1,10 @@
-# Set correct MIME types for JS, WASM, and CSS
-AddType application/javascript .js .mjs
-AddType text/css .css
-AddType application/wasm .wasm
+# React Router BrowserRouter: Redirect everything except files/folders to index.html
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteBase /
 
-# SPA fallback: redirect all requests to index.html except real files/folders
-RewriteEngine On
-RewriteBase /
-RewriteRule ^index\.html$ - [QSA, L]
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule . /index.html [L]
+  # If the request is not a real file or directory, redirect to index.html
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteRule ^ index.html [L]
+</IfModule>
