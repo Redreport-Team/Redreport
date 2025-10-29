@@ -73,13 +73,13 @@ Papaloco, Moraa, Cesar Gonzalez II, Emma, Scott, hugo
 
 Larrain, Gaspar (2025). Underreporting Might be for the Better Technological Innovation Blueprint regarding Sexual Assault: Understanding. University of Notre Dame. Dataset. https://doi.org/10.7274/29577557.v1
 
-[contributors-shield]: https://img.shields.io/github/contributors/CaptainSquid9/RedReport.svg?style=for-the-badge
-[contributors-url]: https://github.com/CaptainSquid9/RedReport/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/CaptainSquid9/RedReport.svg?style=for-the-badge
-[forks-url]: https://github.com/CaptainSquid9/RedReport/network/members
-[stars-shield]: https://img.shields.io/github/stars/CaptainSquid9/RedReport.svg?style=for-the-badge
-[stars-url]: https://github.com/CaptainSquid9/RedReport/stargazers
-[issues-shield]: https://img.shields.io/github/issues/CaptainSquid9/RedReport.svg?style=for-the-badge
-[issues-url]: https://github.com/CaptainSquid9/RedReport/issues
+[contributors-shield]: https://img.shields.io/github/contributors/Redreport-Team/RedReport.svg?style=for-the-badge
+[contributors-url]: https://github.com/Redreport-Team/Redreport/graphs/contributors
+[forks-shield]: https://img.shields.io/github/forks/Redreport-Team/RedReport.svg?style=for-the-badge
+[forks-url]: https://github.com/Redreport-Team/RedReport/network/members
+[stars-shield]: https://img.shields.io/github/stars/Redreport-Team/RedReport.svg?style=for-the-badge
+[stars-url]: https://github.com/Redreport-Team/RedReport/stargazers
+[issues-shield]: https://img.shields.io/github/issues/Redreport-Team/RedReport.svg?style=for-the-badge
+[issues-url]: https://github.com/Redreport-Team/RedReport/issues
 [license-shield]: https://badgen.net/static/license/CC%20BY-NC-SA%203.0/yellow
-[license-url]: https://github.com/CaptainSquid9/RedReport/blob/main/LICENSE
+[license-url]: https://github.com/Redreport-Team/RedReport/blob/main/LICENSE
