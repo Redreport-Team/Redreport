@@ -17,7 +17,7 @@
 <img src="https://github.com/user-attachments/assets/c10795ff-aeb5-47f8-b2e7-82880c1c63a7"/>
 </p>
 
-# **Redreport**
+# **RedReport**
 
 ### _You don't have to suffer alone_
 
