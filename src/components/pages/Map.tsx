@@ -136,7 +136,11 @@ function Map() {
         "verbal-aggression": 0,
         discrimination: 0,
       };
-      const totalIncidents = location?.totalIncidents + 1 || 1;
+      // For totalIncidents, increment if already present for this buildingName
+      const totalIncidents = TempMapPoints[point.specificLocation]
+        ?.totalIncidents
+        ? TempMapPoints[point.specificLocation].totalIncidents + 1
+        : 1;
       const incidentCounts: { [key: string]: number } = {
         ...TempIncidentCounts,
       };
