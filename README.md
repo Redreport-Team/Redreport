@@ -39,7 +39,7 @@ RedReport is preparing for launch at the University of Notre Dame, acting as a s
 
 ### V1.0.0
 
-<img width="1874" height="813" alt="Homepage" src="https://github.com/user-attachments/assets/3d2021a8-2853-410e-9865-2b4e75987e7e" />
+<img width="1874" height="813" alt="HomePage" src="https://github.com/user-attachments/assets/3d2021a8-2853-410e-9865-2b4e75987e7e" />
 <img width="1867" height="813" alt="Map" src="https://github.com/user-attachments/assets/1c78c1fa-8e79-4fe8-90d8-2b8fff6a14df" />
 
 ## Authors
