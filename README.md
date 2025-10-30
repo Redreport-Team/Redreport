@@ -44,8 +44,8 @@ RedReport is preparing for launch at the University of Notre Dame, acting as a s
 
 ## Authors
 
-<a href="https://github.com/glarrainv/redreport/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=glarrainv/redreport" />
+<a href="https://github.com/Redreport-Team/Redreport/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Redreport-Team/Redreport" />
 </a>
 
 [![GitHub User's stars](https://img.shields.io/github/stars/glarrainv?style=for-the-badge&logo=github&label=Gaspar%20Larrain&labelColor=%23000&color=%23e6e6e6&link=https%3A%2F%2Fgithub.com%2Fglarrainv)](https://github.com/glarrainv/)
