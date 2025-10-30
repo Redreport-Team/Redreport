@@ -291,7 +291,15 @@ h6 {
   backdrop-filter: blur(10px);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.3s ease;
+  opacity: 0;
+  pointer-events: none;
+  z-index: -1;
+  transition: opacity 0.3s ease, z-index 0.3s linear;
+}
+.map-filter-menu.open {
+  opacity: 1;
+  pointer-events: auto;
+  z-index: 1002;
 }
 
 .menu-toggle-btn {
@@ -473,14 +481,15 @@ h6 {
 /* Responsive Design */
 @media (max-width: 768px) {
   .map-filter-menu {
-    max-width: 280px;
-    min-width: 250px;
+    max-width: 230px;
+    min-width: 200px;
     top: 10px;
-    left: 10px;
+    left: -20px;
   }
 
   .filter-content {
     padding: 15px;
+    max-height: 300px;
   }
 
   .back-button {
@@ -493,7 +502,6 @@ h6 {
   .map-filter-menu {
     max-width: calc(100vw - 40px);
     min-width: auto;
-    width: calc(100vw - 40px);
     /* Already at top: 10px; left: 10px; from above */
   }
 

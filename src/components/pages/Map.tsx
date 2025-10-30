@@ -491,7 +491,7 @@ function Map() {
       {/* Filter Menu */}
       <div className="map-filter z-front">
         <div
-          className="map-filter-menu m-2"
+          className={`map-filter-menu m-1${filters.showMenu ? " open" : ""}`}
           style={{
             zIndex: filters.showMenu ? 1001 : -1,
             opacity: filters.showMenu ? 1 : 0,

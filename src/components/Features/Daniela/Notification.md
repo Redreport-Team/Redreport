@@ -15,7 +15,7 @@ _Rewrite the following document after completion_
 
 - After a certain amount of incidents in a specific area send push notification to RedReport Team
 
-- Track number of individuals involved in the incident to adjust how risk score.\*
+- Track the number of individuals involved in the incident to adjust the risk score.\*
 
 * If you choose to only do this one, you need to find a way to make it more complex and useful than just adding a field.
 

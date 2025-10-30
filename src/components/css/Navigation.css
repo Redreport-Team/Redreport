@@ -77,9 +77,45 @@ nav {
   transition: width 0.1s ease;
 }
 
+.hamburger {
+  display: none;
+  cursor: pointer;
+  z-index: 1002;
+  background: none;
+  border: none;
+  font-size: 2.2rem;
+  padding: 0.5rem;
+  color: #d82f25;
+}
+.hamburger-icon {
+  font-size: 2rem;
+}
+
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
   .nav-links {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    top: 105px;
+    right: 0;
+    width: 70vw;
+    max-width: 320px;
+    background: #fff;
+    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.08);
+    height: calc(100vh - 60px);
+    align-items: flex-start;
+    gap: 1.5rem;
+    padding: 2rem 1.5rem;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    z-index: 1500;
+  }
+  .nav-links.open {
+    transform: translateX(0);
+  }
+  .hamburger {
+    display: block;
+    margin-left: auto;
   }
 }
