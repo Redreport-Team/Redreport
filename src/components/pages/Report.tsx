@@ -168,7 +168,7 @@ const Report: React.FC = () => {
 
   const offenseTypeLabels: { [key: string]: string } = {
     "uncomfortable-situation": "Uncomfortable Situation",
-    "Sexual Misconduct": "Sexual Misconduct",
+    "sexual-misconduct": "Sexual Misconduct",
     "physical-aggression": "Physical Aggression",
     "verbal-aggression": "Verbal Aggression",
     discrimination: "Discrimination",
@@ -444,9 +444,9 @@ const Report: React.FC = () => {
                       <input
                         type="checkbox"
                         name="offense-type"
-                        value="Sexual Misconduct"
+                        value="sexual-misconduct"
                         checked={formData.offenseTypes.includes(
-                          "Sexual Misconduct"
+                          "sexual-misconduct"
                         )}
                         onChange={handleCheckboxChange}
                       />
