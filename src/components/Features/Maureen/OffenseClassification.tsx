@@ -2,7 +2,7 @@
 import React from "react";
 
 // Function for all JS or TS functions they should handle the logic
-function SafetyHub() {
+function OffenseClassification() {
   //HTML Code handling Visual Structure
   return (
     <>
@@ -11,6 +11,7 @@ function SafetyHub() {
   );
 }
 
-export default SafetyHub;
+export default OffenseClassification;
+
 // HTML ELement to add in other tsx files
-// <SafetyHub />;
+// <OffenseClassification />;

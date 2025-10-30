@@ -18,7 +18,7 @@ Section for safety tips and a resource hub. Here students can find quick safety 
 ## Potential Implementations:
 
 - Popup visible in Navbar after button click
-- Resources visible after report submission suggesting "next steps".|
+- Resources visible after report submission suggesting "next steps".
 
 ## Skills required:
 
@@ -41,9 +41,9 @@ Typescript, React, HTML, CSS
 
 ## Requirements:
 
-## Must integrate into the SafetyHub Element into one of the /components/pages or /components/UI
+### Must integrate into the SafetyHub Element into one of the /components/pages or /components/UI files.
 
-## CANNOT Copy paste SafetyHub Element from tutorial, must add unique touch through multiple (or all) of the following:
+### CANNOT Copy, paste unmodified elements from tutorials. Instead you must add unique touch through multiple (or all) of the following:
 
 - Design matching Redreport branding.
 - Research into campus and local resources to add as content.
@@ -54,7 +54,7 @@ Typescript, React, HTML, CSS
 
 ### Create your own AI tutor:
 
-[Create your personalized tutor for this project using this Gemini Gem and describing your feature](https://gemini.google.com/gem/1v8r3WDbPjj1zjTveasm8fBkPKUWxQ03r?usp=sharing)
+[Create your personalized tutor for this project using this Gemini Gem and describing your feature](https://gemini.google.com/gem/1l05Zv4Us7WLypMNyXu7Y4q5iOIJzs2pS?usp=sharing)
 
 ### Video and Article Tutorials
 
