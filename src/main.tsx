@@ -4,6 +4,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./components/pages/LandingPage";
 import Report from "./components/pages/Report";
 import Map from "./components/pages/Map";
+import Clarity from "@microsoft/clarity";
+
+const projectId = import.meta.env.VITE_CLARITY_ID;
+
+Clarity.init(projectId);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
