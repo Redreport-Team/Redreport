@@ -25,7 +25,7 @@ JS, CSS, Firebase pulling
 
 ## Core Concepts Suggested
 
-### Notification
+### Dashboard
 
 1. **Firestore fetching:** Fetching Data from Firestore database
 2. **ChartJS Visualizations:** Use data through ChartJS to create different graphs and visualizations

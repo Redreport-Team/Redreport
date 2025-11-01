@@ -2,12 +2,15 @@
 /**** Handles styling, colors and positioning ****/
 
 ReplaceWithHTMLElement {
+  color: transparent;
 }
 
 .ReplaceWithClassName {
+  color: transparent;
 }
 
 #ReplaceWithElementID {
+  color: transparent;
 }
 
 /*****        CSS File Created for Daniela      *****/
