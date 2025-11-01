@@ -1,6 +1,6 @@
 # Safety Hub Feature Readme File
 
-## Author: Joey Salantino
+## Author: Joey Salantino & Sharon Cho
 
 ### Reviewer: Gaspar Larrain
 
@@ -18,7 +18,7 @@ Section for safety tips and a resource hub. Here students can find quick safety 
 ## Potential Implementations:
 
 - Popup visible in Navbar after button click
-- Resources visible after report submission suggesting "next steps".
+- Resources visible after report submission suggesting "next steps".|
 
 ## Skills required:
 
@@ -41,9 +41,9 @@ Typescript, React, HTML, CSS
 
 ## Requirements:
 
-### Must integrate into the SafetyHub Element into one of the /components/pages or /components/UI files.
+## Must integrate into the SafetyHub Element into one of the /components/pages or /components/UI
 
-### CANNOT Copy, paste unmodified elements from tutorials. Instead you must add unique touch through multiple (or all) of the following:
+## CANNOT Copy paste SafetyHub Element from tutorial, must add unique touch through multiple (or all) of the following:
 
 - Design matching Redreport branding.
 - Research into campus and local resources to add as content.
