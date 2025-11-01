@@ -1,8 +1,8 @@
-// File Created for Joey's safety tips and a resource hub
+// File Created for Katie's safety tips and a resource hub
 import React from "react";
 
 // Function for all JS or TS functions they should handle the logic
-function Notification() {
+function Dashboard() {
   //HTML Code handling Visual Structure
   return (
     <>
@@ -11,6 +11,6 @@ function Notification() {
   );
 }
 
-export default Notification;
+export default Dashboard;
 // HTML ELement to add in other tsx files
-// <Notification />;
+// <Dashboard />;
