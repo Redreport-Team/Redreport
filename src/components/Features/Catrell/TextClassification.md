@@ -1,4 +1,4 @@
-# Notification Feature Readme File
+# Text Classification Feature Readme File
 
 ## Author: Catrell Conley
 
