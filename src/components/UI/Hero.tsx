@@ -4,13 +4,6 @@ import "../css/Hero.css";
 const Hero: React.FC = () => {
   return (
     <section id="home" className="hero">
-      <div className="floating-elements">
-        <div className="floating-dot"></div>
-        <div className="floating-dot"></div>
-        <div className="floating-dot"></div>
-        <div className="floating-dot"></div>
-      </div>
-
       <div className="hero-container">
         <div className="hero-content">
           <h1>

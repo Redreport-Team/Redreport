@@ -3,12 +3,14 @@ nav {
   position: fixed;
   top: 0;
   width: 100%;
-  background: rgba(254, 248, 243, 0.95);
-  backdrop-filter: blur(10px);
+  background: rgb(255, 255, 255);
   padding: 1rem 2rem;
   z-index: 1000;
-  transition: all 0.3s ease;
-  border-bottom: 2px solid rgba(216, 47, 37, 0.1);
+  transition: all 0.5s linear;
+  -webkit-transition: all 0.5s linear;
+  -moz-transition: all 0.5s linear;
+  -ms-transition: all 0.5s linear;
+  -o-transition: all 0.5s linear;
 }
 
 .nav-container {
@@ -34,12 +36,6 @@ nav {
   padding: 0.5rem 1rem;
   border-radius: 8px;
 }
-
-.nav-links a:hover {
-  background: rgba(216, 47, 37, 0.1);
-  color: #d82f25;
-}
-
 .report-btn {
   background: #d82f25;
   color: white !important;
@@ -47,7 +43,7 @@ nav {
   border-radius: 25px;
   font-weight: 700;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
+  box-shadow: 0 4px 4px rgba(216, 47, 37, 0.3);
 }
 .map-btn {
   background: white;
@@ -56,15 +52,19 @@ nav {
   border-radius: 25px;
   font-weight: 700;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
+  box-shadow: 0 4px 4px rgba(202, 174, 172, 0.3);
 }
 
 .report-btn:hover {
-  background: #e03731;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(216, 47, 37, 0.4);
+  background: rgba(255, 163, 163, 0.1);
+  color: #d82f25 !important;
 }
-
+.map-btn:hover {
+  transform: translateY(-2px);
+  background: #d82e25fb;
+  color: #ffffff !important;
+}
 /* Scroll indicator */
 .scroll-indicator {
   position: fixed;
@@ -72,7 +72,7 @@ nav {
   left: 0;
   width: 0%;
   height: 4px;
-  background: linear-gradient(to right, #d82f25, #113052);
+  background: #d82f25;
   z-index: 1001;
   transition: width 0.1s ease;
 }

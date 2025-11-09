@@ -154,7 +154,7 @@ const Report: React.FC = () => {
 
   // Returns an array of suggestions matching the input (case-insensitive, prefix match)
   const AutoCompleteHall = (inputValue: string): string[] => {
-    const cleanInput = inputValue.replace(/[^a-zA-Z0-9 ]/g, "").trim();
+    const cleanInput = inputValue.replace(/[^a-zA-Z0-9]/g, "");
     if (!cleanInput || !suggestions || suggestions.length === 0) return [];
     const lower = cleanInput.toLowerCase();
     const matches = suggestions.filter((s) =>
@@ -225,7 +225,7 @@ const Report: React.FC = () => {
 
     // Only show suggestion if we have matches and current input is a prefix
     if (list.length > 0) {
-      const first = list[0];
+      const first = list[0].trim();
       const cleanInput = value.toLowerCase();
       const cleanSuggestion = first.toLowerCase();
 
@@ -245,11 +245,12 @@ const Report: React.FC = () => {
   const handleSpecificLocationKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
   ) => {
-    if (e.key === "Enter") {
+    if (e.key === "Enter" || e.key === "Tab") {
       // If there is an inline suggestion, accept it by appending to current value
       if (inlineSuggestion) {
         e.preventDefault();
         const newValue = formData.specificLocation + inlineSuggestion;
+        console.log(newValue);
         // create a synthetic event for handleInputChange
         const syntheticEvent = {
           target: { name: "specificLocation", value: newValue },
