@@ -65,11 +65,9 @@ const LandingPage: React.FC = () => {
       if (nav) {
         window.addEventListener("scroll", () => {
           if (window.scrollY > 100) {
-            nav.style.background = "rgba(254, 248, 243, 0.98)";
-            nav.style.boxShadow = "0 2px 20px rgba(216, 47, 37, 0.1)";
+            nav.style.background = "rgba(255, 255, 255)";
           } else {
-            nav.style.background = "rgba(254, 248, 243, 0.95)";
-            nav.style.boxShadow = "none";
+            nav.style.background = "rgba(255, 255, 255, 0.4)";
           }
         });
       }
@@ -93,17 +91,6 @@ const LandingPage: React.FC = () => {
 
         card.addEventListener("mouseleave", () => {
           (card as HTMLElement).style.transform = "scale(1) rotate(0deg)";
-        });
-      });
-
-      // Mission cards animation
-      document.querySelectorAll(".mission-card").forEach((card, index) => {
-        (card as HTMLElement).style.animationDelay = `${index * 0.2}s`;
-        card.addEventListener("mouseenter", () => {
-          (card as HTMLElement).style.borderLeft = "8px solid #D82F25";
-        });
-        card.addEventListener("mouseleave", () => {
-          (card as HTMLElement).style.borderLeft = "4px solid #D82F25";
         });
       });
     };

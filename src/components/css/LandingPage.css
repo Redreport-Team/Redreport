@@ -7,13 +7,13 @@
 
 body {
   font-family: "Inter", sans-serif;
-  background-color: #fef8f3;
-  color: #113052;
+  color: var(--text-color);
   line-height: 1.6;
 }
 
 .landing-page {
   min-height: 100vh;
+  overflow: hidden;
 }
 .logo {
   padding: 5px;
@@ -29,8 +29,6 @@ body {
 }
 
 .logo .highlight {
-  color: #fff;
-  background-color: #c41a18;
-  border-radius: 10px;
+  color: var(--text-color);
   padding: 1px;
 }

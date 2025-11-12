@@ -23,6 +23,8 @@
     "build": "vite build"
   },
   "dependencies": {
+    "@maptiler/leaflet-maptilersdk": "^4.1.1",
+    "@microsoft/clarity": "^1.0.0",
     "firebase": "^12.3.0",
     "leaflet": "^1.9.4",
     "react": "^19.1.1",
