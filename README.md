@@ -66,7 +66,9 @@ RedReport is preparing for launch at the University of Notre Dame, acting as a s
 ### Testing Program
 
 _Website V1.0.0 Cohort_ - 13 Testers - 4 Countries - 6 Colleges
+
 Thank you to everyone involved, including but not limited to:
+
 Papaloco, Moraa, Cesar Gonzalez II, Emma, Scott, hugo
 
 ## Appendix
