@@ -3,9 +3,11 @@ import "../css/Report.css";
 import Navigation from "../UI/Navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import { campuses, locations } from "../../types/locations";
+import { locations } from "../../types/locations";
+import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
 interface FormData {
+  userID: string;
   campus: string;
   location: string;
   specificLocation: string;
@@ -17,6 +19,7 @@ interface FormData {
 const Report: React.FC = () => {
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [formData, setFormData] = useState<FormData>({
+    userID: "",
     campus: "",
     location: "",
     specificLocation: "",
@@ -24,15 +27,16 @@ const Report: React.FC = () => {
     time: "",
     additionalInfo: "",
   });
-  const campusObj: Record<string, any> = campuses;
+
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [reportId, setReportId] = useState<string>("");
   const [suggestionsList, setSuggestionsList] = useState<string[]>([]);
   const [inlineSuggestion, setInlineSuggestion] = useState<string>("");
   const [specificLoc, setSpecificLoc] = useState<string>("");
   const [suggestions, setSuggestions] = useState<string[]>([]);
-  const mirrorRef = useRef<HTMLSpanElement | null>(null);
+
   const specificInputRef = useRef<HTMLInputElement | null>(null);
+  const { executeRecaptcha } = useGoogleReCaptcha();
 
   const totalSteps = 4;
 
@@ -86,13 +90,11 @@ const Report: React.FC = () => {
     }
   };
 
-  const handleCheckboxChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
+  const handleRadioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      offenseTypes: checked
-        ? [...prev.offenseTypes, value]
-        : prev.offenseTypes.filter((type) => type !== value),
+      offenseTypes: [value],
     }));
   };
 
@@ -127,7 +129,7 @@ const Report: React.FC = () => {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateCurrentStep()) {
@@ -136,10 +138,16 @@ const Report: React.FC = () => {
     setIsSubmitting(true);
 
     // Simulate form submission
-    setTimeout(() => {
-      const id = SubmitReport();
-      setReportId(id.toString());
-      setCurrentStep(5); // Show success
+    setTimeout(async () => {
+      const id: string = await SubmitReport();
+      if (id === "Error") {
+        alert(
+          "There was an error submitting your report. Please try again later."
+        );
+        return;
+      }
+      setReportId(id);
+      setCurrentStep(5);
       setIsSubmitting(false);
     }, 2000);
   };
@@ -262,11 +270,20 @@ const Report: React.FC = () => {
     }
   };
   async function SubmitReport() {
+    if (!executeRecaptcha) {
+      console.warn("reCAPTCHA execution not ready yet.");
+      return "Error";
+    }
+
+    const token = await executeRecaptcha("submit_report");
     const docRef = await addDoc(collection(db, "reports"), {
       ...formData,
+      recaptchaToken: token,
+      action: "submit_report",
       Time: serverTimestamp(),
       createdAt: serverTimestamp(),
     });
+    console.log("Document written with ID: ", docRef.id);
     return docRef.id;
   }
   return (
@@ -281,8 +298,10 @@ const Report: React.FC = () => {
               Anonymous <span className="highlight">Report</span>
             </h1>
             <p>
-              Your voice matters. Share your experience in a safe, secure
-              environment where your identity remains completely protected.
+              What you went through is not acceptable. Help us make campus safer
+              by sharing as much information you feel comfortable sharing.
+              After, We will show you the different paths you can take based on
+              your current comfort level.
             </p>
           </div>
 
@@ -290,8 +309,14 @@ const Report: React.FC = () => {
           <div className="security-notice">
             <h3>Your Privacy is Protected</h3>
             <p>
-              This form uses advanced encryption and anonymization techniques.
-              No identifying information is collected or stored.
+              No identifying information is collected or stored. All fields are
+              optional, the more information you provide the better we can
+              assist you. No names will be requested from any party, and we
+              cannot provide legal action.{" "}
+              <b>
+                If you feel ready to pursue legal action, please contact campus
+                security or local authorities.
+              </b>
             </p>
           </div>
 
@@ -422,18 +447,18 @@ const Report: React.FC = () => {
                   <div className="label-description">
                     Select all that apply to your experience
                   </div>
-                  <div className="checkbox-group">
-                    <label className="checkbox-item">
+                  <div className="radio-group">
+                    <label className="radio-item">
                       <input
-                        type="checkbox"
+                        type="radio"
                         name="offense-type"
                         value="uncomfortable-situation"
                         checked={formData.offenseTypes.includes(
                           "uncomfortable-situation"
                         )}
-                        onChange={handleCheckboxChange}
+                        onChange={handleRadioChange}
                       />
-                      <div className="checkbox-content">
+                      <div className="radio-content">
                         <strong>Uncomfortable Situation</strong>
                         <small>
                           Situations that made you feel uneasy or uncomfortable
@@ -441,65 +466,65 @@ const Report: React.FC = () => {
                       </div>
                     </label>
 
-                    <label className="checkbox-item">
+                    <label className="radio-item">
                       <input
-                        type="checkbox"
+                        type="radio"
                         name="offense-type"
                         value="sexual-misconduct"
                         checked={formData.offenseTypes.includes(
                           "sexual-misconduct"
                         )}
-                        onChange={handleCheckboxChange}
+                        onChange={handleRadioChange}
                       />
-                      <div className="checkbox-content">
+                      <div className="radio-content">
                         <strong>Sexual Misconduct</strong>
                         <small>Physical contact without permission</small>
                       </div>
                     </label>
 
-                    <label className="checkbox-item">
+                    <label className="radio-item">
                       <input
-                        type="checkbox"
+                        type="radio"
                         name="offense-type"
                         value="physical-aggression"
                         checked={formData.offenseTypes.includes(
                           "physical-aggression"
                         )}
-                        onChange={handleCheckboxChange}
+                        onChange={handleRadioChange}
                       />
-                      <div className="checkbox-content">
+                      <div className="radio-content">
                         <strong>Physical Aggression</strong>
                         <small>Physical violence or threat of violence</small>
                       </div>
                     </label>
 
-                    <label className="checkbox-item">
+                    <label className="radio-item">
                       <input
-                        type="checkbox"
+                        type="radio"
                         name="offense-type"
                         value="verbal-aggression"
                         checked={formData.offenseTypes.includes(
                           "verbal-aggression"
                         )}
-                        onChange={handleCheckboxChange}
+                        onChange={handleRadioChange}
                       />
-                      <div className="checkbox-content">
+                      <div className="radio-content">
                         <strong>Verbal Aggression</strong>
                         <small>Threatening, hostile, or abusive language</small>
                       </div>
                     </label>
 
-                    <label className="checkbox-item">
+                    <label className="radio-item">
                       <input
-                        type="checkbox"
+                        type="radio"
                         name="offense-type"
                         value="discrimination"
                         checked={formData.offenseTypes.includes(
                           "discrimination"
                         )}
-                        onChange={handleCheckboxChange}
+                        onChange={handleRadioChange}
                       />
-                      <div className="checkbox-content">
+                      <div className="radio-content">
                         <strong>Discrimination</strong>
                         <small>
                           Treatment based on identity, race, gender, religion,
@@ -622,8 +647,11 @@ const Report: React.FC = () => {
                   {currentStep === 4 && (
                     <button
                       type="submit"
-                      className="btn btn-primary"
+                      className="btn btn-primary g-recaptcha"
                       disabled={isSubmitting}
+                      data-sitekey="6LeMDQssAAAAAC3prYanNGr6ItRklzJicu190qUc"
+                      data-callback="onSubmit"
+                      data-action="submit"
                     >
                       {!isSubmitting && <span>Submit Anonymous Report</span>}
                       {isSubmitting && (

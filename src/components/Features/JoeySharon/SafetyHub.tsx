@@ -6,7 +6,10 @@ function SafetyHub() {
   //HTML Code handling Visual Structure
   return (
     <>
-      <div className=""></div>
+      <div className="">
+        <div></div>
+        <div></div>
+      </div>
     </>
   );
 }
