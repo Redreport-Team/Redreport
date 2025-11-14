@@ -279,9 +279,9 @@ const Report: React.FC = () => {
       const token = await executeRecaptcha("submit_report");
       const docRef = await addDoc(collection(db, "reports"), {
         ...formData,
-        recaptchaToken: token, // Include the reCAPTCHA token
-        action: "submit_report",
-        Time: serverTimestamp(),
+        token: token,
+        action: "USER_ACTION",
+        siteKey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
         createdAt: serverTimestamp(),
       });
       console.log("Document written with ID: ", docRef.id);
