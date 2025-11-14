@@ -276,11 +276,11 @@ const Report: React.FC = () => {
     }
 
     try {
-      const token = await executeRecaptcha("submit_report");
+      const token = await executeRecaptcha("USER_ACTION");
       const docRef = await addDoc(collection(db, "reports"), {
         ...formData,
         token: token,
-        action: "USER_ACTION",
+        expectedAction: "USER_ACTION",
         siteKey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
         createdAt: serverTimestamp(),
       });
