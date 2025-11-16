@@ -4,7 +4,7 @@ import Hero from "../UI/Hero";
 import Mission from "../UI/Mission";
 import Timeline from "../UI/Timeline";
 import "../css/LandingPage.css";
-import SafetyHub from "../Features/JoeySharon/SafetyHub";
+import OffenseClassification from "../Features/Maureen/OffenseClassification";
 
 const LandingPage: React.FC = () => {
   useEffect(() => {
@@ -109,7 +109,7 @@ const LandingPage: React.FC = () => {
       <Navigation />
       <Hero />
       <Mission />
-      <SafetyHub />
+      <OffenseClassification />
       <Timeline />
     </div>
   );
