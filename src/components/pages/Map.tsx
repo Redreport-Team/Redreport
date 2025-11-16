@@ -136,6 +136,7 @@ function Map() {
         "verbal-aggression": 0,
         discrimination: 0,
       };
+
       // For totalIncidents, increment if already present for this buildingName
       const totalIncidents = TempMapPoints[point.specificLocation]
         ?.totalIncidents
@@ -144,15 +145,6 @@ function Map() {
       const incidentCounts: { [key: string]: number } = {
         ...TempIncidentCounts,
       };
-      if (point.offenseTypes) {
-        point.offenseTypes.forEach((type) => {
-          if (incidentCounts[type] !== undefined) {
-            incidentCounts[type] += 1;
-          } else {
-            incidentCounts[type] = 1;
-          }
-        });
-      }
 
       // Key properties from Case and building
       const buildingName =
@@ -167,30 +159,38 @@ function Map() {
       const campus = point.campus || location?.campus || "Unknown Campus";
       const buildingType =
         location?.type || location?.buildingType || "Unknown Type";
-      const recentIncidents = [point];
-      console.log(
-        "Individual TempMapPoint: ",
-        (TempMapPoints[buildingName] = {
+
+      if (!TempMapPoints[buildingName]) {
+        // First incident for this building
+        TempMapPoints[buildingName] = {
           buildingName,
           coordinates,
-          totalIncidents,
-          incidentCounts,
+          totalIncidents: 1,
+          incidentCounts: {
+            "uncomfortable-situation": 0,
+            "sexual-misconduct": 0,
+            "physical-aggression": 0,
+            "verbal-aggression": 0,
+            discrimination: 0,
+          },
           campus,
           buildingType,
-          recentIncidents,
-        })
-      );
-      TempMapPoints[buildingName] = {
-        buildingName,
-        coordinates,
-        totalIncidents,
-        incidentCounts,
-        campus,
-        buildingType,
-        recentIncidents,
-      };
+          recentIncidents: [point],
+        };
+      } else {
+        // Additional incident for existing building
+        TempMapPoints[buildingName].totalIncidents++;
+        TempMapPoints[buildingName].recentIncidents.push(point);
+      }
+      // Increment incident type counts (fixed operator)
+      if (point.offenseTypes) {
+        point.offenseTypes.forEach((type) => {
+          if (TempMapPoints[buildingName].incidentCounts[type] !== undefined) {
+            TempMapPoints[buildingName].incidentCounts[type]++; // Fixed!
+          }
+        });
+      }
     });
-    console.log("TempMapPoints: ", TempMapPoints);
     setMapPoints(TempMapPoints);
     return TempMapPoints;
   };

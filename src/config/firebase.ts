@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { Analytics, getAnalytics } from "firebase/analytics";
+import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -18,6 +19,7 @@ const requiredEnvVars = [
   "VITE_FIREBASE_API_KEY",
   "VITE_FIREBASE_AUTH_DOMAIN",
   "VITE_FIREBASE_PROJECT_ID",
+  "VITE_RECAPTCHA_SITE_KEY",
 ];
 
 requiredEnvVars.forEach((varName) => {
@@ -30,6 +32,20 @@ requiredEnvVars.forEach((varName) => {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+// Initialize AppCheck with reCAPTCHA v3
+setTimeout(() => {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaV3Provider(
+        import.meta.env.VITE_RECAPTCHA_SITE_KEY
+      ),
+      isTokenAutoRefreshEnabled: true,
+    });
+    console.log("AppCheck initialized successfully");
+  } catch (error) {
+    console.warn("AppCheck initialization error:", error);
+  }
+}, 100);
 
 // Initialize Analytics only in browser environment
 let analytics: Analytics | null = null;
@@ -37,4 +53,4 @@ if (typeof window !== "undefined") {
   analytics = getAnalytics(app);
 }
 
-export { db, auth, app, analytics };
+export { db, app, auth, analytics };
