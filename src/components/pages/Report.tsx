@@ -4,12 +4,15 @@ import Navigation from "../UI/Navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
 import locationsData from "../../locations.json";
+import { calculateNewRisk } from "./riskCalculator";
+import Map from "./Map";
 
 interface FormData {
   campus: string;
   location: string;
   specificLocation: string;
   offenseTypes: string[];
+  individualsInvolved: number;
   time: string;
   additionalInfo: string;
 }
@@ -21,6 +24,7 @@ const Report: React.FC = () => {
     location: "",
     specificLocation: "",
     offenseTypes: [],
+    individualsInvolved: 0,
     time: "",
     additionalInfo: "",
   });
@@ -31,7 +35,7 @@ const Report: React.FC = () => {
   const [inlineSuggestion, setInlineSuggestion] = useState<string>("");
   const mirrorRef = useRef<HTMLSpanElement | null>(null);
   const specificInputRef = useRef<HTMLInputElement | null>(null);
-
+  const[individualsInvolved, setIndividualsInvolved] = useState<number | ''>('');
   const totalSteps = 4;
 
   var [locations, setLocations] = useState<Record<string, any>>(
@@ -108,6 +112,15 @@ const Report: React.FC = () => {
     if (!validateCurrentStep()) {
       return;
     }
+    //const finalRiskScore = calculateNewRisk(riskScore, individualsInvolved as number);
+    
+    /*const finalReportData = {
+      location: location,
+      incidentType: incidentType,
+      description: description, 
+      individualsInvolved: individualsInvolved,
+      riskScore = finalRiskScore;
+    }*/
     setIsSubmitting(true);
 
     // Simulate form submission
@@ -118,6 +131,12 @@ const Report: React.FC = () => {
       setIsSubmitting(false);
     }, 2000);
   };
+
+  const handleIndividualChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Makes sure that the input individuals value by the user is not negative
+    const value = parseInt(event.target.value, 10);
+    setIndividualsInvolved(isNaN(value) || value < 0 ? '' : value);
+  }
 
   const formatLocation = (location: string): string => {
     return location.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -552,6 +571,17 @@ const Report: React.FC = () => {
                     onChange={handleInputChange}
                     placeholder="Any additional context, concerns, or information you'd like to provide"
                   ></textarea>
+                </div>
+
+                <div>
+                  <label htmlFor="individuals">Number of individuals involved:</label>
+                  <input
+                    id="individuals"
+                    type="number"
+                    min="0"
+                    value={individualsInvolved}
+                    onChange={handleIndividualChange}
+                  />
                 </div>
               </div>
 
