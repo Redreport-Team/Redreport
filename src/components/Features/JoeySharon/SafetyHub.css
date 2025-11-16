@@ -9,8 +9,133 @@ ReplaceWithHTMLElement {
   color: transparent;
 }
 
-#ReplaceWithElementID {
-  color: transparent;
+#safey-resources {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
 }
 
+#sexual-harassment {
+  background: linear-gradient(135deg, #d82f25, #b82620);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
+  transition: transform 0.3s ease;
+  margin-bottom: 20px;
+}
+
+#discrimination {
+  background: linear-gradient(135deg, #d82f25, #b82620);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
+  transition: transform 0.3s ease;
+  margin-bottom: 20px;
+}
+
+#sexual-harassment a,
+#discrimination a {
+  color: white;
+  text-decoration: underline;
+}
+
+#sexual-harassment:hover a,
+#discrimination:hover a{
+  color: black;
+}
+
+#sexual-harassment:hover,
+#discrimination:hover {
+    transform: scale(1.05);
+}
+
+#resources {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 24px;
+}
+
+#non-confidential-resources,
+#off-campus-resources,
+#confidential-resources {
+  text-align: left;
+}
+
+#non-confidential-resources h2,
+#off-campus-resources h2,
+#confidential-resources h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: rgb(215, 3, 3);
+}
+
+#non-confidential-resources .subsection,
+#off-campus-resources .subsection
+#confidential-resources .subsection {
+  margin-bottom: 1.8rem;
+}
+
+#non-confidential-resources h3,
+#off-campus-resources h3,
+#confidential-resources h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: black;
+  border-left: 4px solid rgb(215, 3, 3);
+  padding-left: 0.5rem;
+}
+
+#non-confidential-resources ul,
+#off-campus-resources ul,
+#confidential-resources ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+#non-confidential-resources li,
+#off-campus-resources li,
+#confidential-resources li {
+  margin: 0.4rem 0;
+  line-height: 1.5;
+}
+
+#confidential-resources a {
+  color: rgb(215, 3, 3);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+#confidential-resources a:hover {
+  color: black;
+}
+
+#confidential-resources,
+#non-confidential-resources,
+#off-campus-resources {
+  background: white;
+  color: black;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border-radius: 15px;
+  transition: transform 0.3s ease;
+  margin-bottom: 20px;
+}
+
+#confidential-resources a,
+#non-confidential-resources a,
+#off-campus-resources a {
+  color: rgb(215, 3, 3);
+  text-decoration: underline;
+}
+
+#confidential-resources a:hover,
+#non-confidential-resources a:hover,
+#off-campus-resources a:hover {
+  color: black;
+}
 /*****        CSS File Created for Joey & Sharon      *****/
