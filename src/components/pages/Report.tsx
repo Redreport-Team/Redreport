@@ -3,7 +3,6 @@ import "../css/Report.css";
 import Navigation from "../UI/Navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import locationsData from "../../locations.json";
 import { calculateNewRisk } from "./riskCalculator";
 import Map from "./Map";
 import { locations } from "../../types/locations";
@@ -169,8 +168,14 @@ const Report: React.FC = () => {
 
   const handleIndividualChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     // Makes sure that the input individuals value by the user is not negative
+    //console.log(event.target.value);
     const value = parseInt(event.target.value, 10);
+    //console.log(isNaN(value) || value < 0 ? '' : value);
     setIndividualsInvolved(isNaN(value) || value < 0 ? '' : value);
+    setFormData((prev) => ( {
+      ...prev,
+      individualsInvolved: value,
+    }))
   }
 
   const formatLocation = (location: string): string => {
@@ -291,6 +296,7 @@ const Report: React.FC = () => {
     }
   };
   async function SubmitReport() {
+    console.log(formData);
     if (!executeRecaptcha) {
       console.warn("reCAPTCHA execution not ready yet.");
       return "Error";
@@ -301,7 +307,7 @@ const Report: React.FC = () => {
       ...formData,
       recaptchaToken: token,
       action: "submit_report",
-      Time: serverTimestamp(),
+
       createdAt: serverTimestamp(),
     });
     console.log("Document written with ID: ", docRef.id);
