@@ -275,16 +275,21 @@ const Report: React.FC = () => {
       return "Error";
     }
 
-    const token = await executeRecaptcha("submit_report");
-    const docRef = await addDoc(collection(db, "reports"), {
-      ...formData,
-      recaptchaToken: token,
-      action: "submit_report",
-      Time: serverTimestamp(),
-      createdAt: serverTimestamp(),
-    });
-    console.log("Document written with ID: ", docRef.id);
-    return docRef.id;
+    try {
+      const token = await executeRecaptcha("USER_ACTION");
+      const docRef = await addDoc(collection(db, "reports"), {
+        ...formData,
+        token: token,
+        expectedAction: "USER_ACTION",
+        siteKey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
+        createdAt: serverTimestamp(),
+      });
+      console.log("Document written with ID: ", docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error("Error submitting report:", error);
+      return "Error";
+    }
   }
   return (
     <>
