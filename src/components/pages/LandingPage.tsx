@@ -109,6 +109,7 @@ const LandingPage: React.FC = () => {
       <Navigation />
       <Hero />
       <Mission />
+      <SafetyHub />
       <Timeline />
       <SafetyHub />
     </div>
