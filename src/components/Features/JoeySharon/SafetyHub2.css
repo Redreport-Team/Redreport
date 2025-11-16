@@ -1,0 +1,205 @@
+/*****        CSS File Created for Joey & Sharon      *****/
+/****      Handles styling, colors and positioning    ***/
+
+.list-item {
+  color: red;
+}
+
+.safety-hub-container {
+  max-width: 1000px;
+  margin: 40px auto;
+  background-color: #f0f0f0;
+  padding: 20px;
+}
+
+.resource-columns{
+  display: flex;
+  gap: 30px;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.resource-section {
+  margin-bottom: 40px;
+  flex: 1;
+  min-width: none;
+}
+
+.resource-header {
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  border-left: 5px solid red;
+  padding-left: 10px
+}
+
+.resource-item {
+  background-color: #f5f6fa;
+  border-radius: 8px;
+  padding: 15px 20px;
+  margin-bottom: 20px;
+  border: 1px solid #ddd;
+}
+
+.resource-name {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.resource-description {
+  margin-bottom: 10px;
+}
+
+.resource-link {
+  color: #007bff;
+  text-decoration: none;
+}
+
+.resource-link:hover {
+  text-decoration: underline;
+}
+
+.resource-privacy {
+  font-size: 0.85rem;
+  margin-bottom: 8px;
+  font-style: italic;
+}
+
+.anonymous {
+  color: #007b00; 
+  font-weight: bold;
+}
+
+.not-anonymous {
+  color: #b30000; 
+  font-weight: bold;
+}
+
+.confidential {
+  color: #0c2340; 
+  font-weight: bold;
+}
+
+#sexual-harassment {
+  background: linear-gradient(135deg, #d82f25, #b82620);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
+  transition: transform 0.3s ease;
+  margin-bottom: 20px;
+}
+
+#discrimination {
+  background: linear-gradient(135deg, #d82f25, #b82620);
+  color: white;
+  padding: 2rem;
+  border-radius: 15px;
+  box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
+  transition: transform 0.3s ease;
+  margin-bottom: 20px;
+}
+
+#sexual-harassment a,
+#discrimination a {
+  color: white;
+  text-decoration: underline;
+}
+
+#sexual-harassment:hover a,
+#discrimination:hover a{
+  color: black;
+}
+
+#sexual-harassment:hover,
+#discrimination:hover {
+    transform: scale(1.05);
+}
+
+#resources {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr;
+  gap: 24px;
+}
+
+#non-confidential-resources,
+#off-campus-resources,
+#confidential-resources {
+  text-align: left;
+}
+
+#non-confidential-resources h2,
+#off-campus-resources h2,
+#confidential-resources h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  color: rgb(215, 3, 3);
+}
+
+#non-confidential-resources .subsection,
+#off-campus-resources .subsection
+#confidential-resources .subsection {
+  margin-bottom: 1.8rem;
+}
+
+#non-confidential-resources h3,
+#off-campus-resources h3,
+#confidential-resources h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: black;
+  border-left: 4px solid rgb(215, 3, 3);
+  padding-left: 0.5rem;
+}
+
+#non-confidential-resources ul,
+#off-campus-resources ul,
+#confidential-resources ul {
+  list-style-type: none;
+  padding-left: 0;
+  margin: 0;
+}
+
+#non-confidential-resources li,
+#off-campus-resources li,
+#confidential-resources li {
+  margin: 0.4rem 0;
+  line-height: 1.5;
+}
+
+#confidential-resources a {
+  color: rgb(215, 3, 3);
+  text-decoration: underline;
+  font-weight: 500;
+}
+
+#confidential-resources a:hover {
+  color: black;
+}
+
+#confidential-resources,
+#non-confidential-resources,
+#off-campus-resources {
+  background: white;
+  color: black;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+  border-radius: 15px;
+  transition: transform 0.3s ease;
+  margin-bottom: 20px;
+}
+
+#confidential-resources a,
+#non-confidential-resources a,
+#off-campus-resources a {
+  color: rgb(215, 3, 3);
+  text-decoration: underline;
+}
+
+#confidential-resources a:hover,
+#non-confidential-resources a:hover,
+#off-campus-resources a:hover {
+  color: black;
+}
+/*****        CSS File Created for Joey & Sharon      *****/

@@ -111,6 +111,7 @@ const LandingPage: React.FC = () => {
       <Mission />
       <OffenseClassification />
       <Timeline />
+      <SafetyHub />
     </div>
   );
 };
