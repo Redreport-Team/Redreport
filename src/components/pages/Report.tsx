@@ -3,6 +3,8 @@ import "../css/Report.css";
 import Navigation from "../UI/Navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
+import { calculateNewRisk } from "./riskCalculator";
+import Map from "./Map";
 import { locations } from "../../types/locations";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
@@ -12,6 +14,7 @@ interface FormData {
   location: string;
   specificLocation: string;
   offenseTypes: string[];
+  individualsInvolved: number;
   time: string;
   additionalInfo: string;
 }
@@ -24,6 +27,7 @@ const Report: React.FC = () => {
     location: "",
     specificLocation: "",
     offenseTypes: [],
+    individualsInvolved: 0,
     time: "",
     additionalInfo: "",
   });
@@ -36,6 +40,7 @@ const Report: React.FC = () => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const specificInputRef = useRef<HTMLInputElement | null>(null);
+  const[individualsInvolved, setIndividualsInvolved] = useState<number | ''>('');
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   const totalSteps = 4;
@@ -135,6 +140,15 @@ const Report: React.FC = () => {
     if (!validateCurrentStep()) {
       return;
     }
+    //const finalRiskScore = calculateNewRisk(riskScore, individualsInvolved as number);
+    
+    /*const finalReportData = {
+      location: location,
+      incidentType: incidentType,
+      description: description, 
+      individualsInvolved: individualsInvolved,
+      riskScore = finalRiskScore;
+    }*/
     setIsSubmitting(true);
 
     // Simulate form submission
@@ -151,6 +165,18 @@ const Report: React.FC = () => {
       setIsSubmitting(false);
     }, 2000);
   };
+
+  const handleIndividualChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    // Makes sure that the input individuals value by the user is not negative
+    //console.log(event.target.value);
+    const value = parseInt(event.target.value, 10);
+    //console.log(isNaN(value) || value < 0 ? '' : value);
+    setIndividualsInvolved(isNaN(value) || value < 0 ? '' : value);
+    setFormData((prev) => ( {
+      ...prev,
+      individualsInvolved: value,
+    }))
+  }
 
   const formatLocation = (location: string): string => {
     return location.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -270,26 +296,22 @@ const Report: React.FC = () => {
     }
   };
   async function SubmitReport() {
+    console.log(formData);
     if (!executeRecaptcha) {
       console.warn("reCAPTCHA execution not ready yet.");
       return "Error";
     }
 
-    try {
-      const token = await executeRecaptcha("USER_ACTION");
-      const docRef = await addDoc(collection(db, "reports"), {
-        ...formData,
-        token: token,
-        expectedAction: "USER_ACTION",
-        siteKey: import.meta.env.VITE_RECAPTCHA_SITE_KEY,
-        createdAt: serverTimestamp(),
-      });
-      console.log("Document written with ID: ", docRef.id);
-      return docRef.id;
-    } catch (error) {
-      console.error("Error submitting report:", error);
-      return "Error";
-    }
+    const token = await executeRecaptcha("submit_report");
+    const docRef = await addDoc(collection(db, "reports"), {
+      ...formData,
+      recaptchaToken: token,
+      action: "submit_report",
+
+      createdAt: serverTimestamp(),
+    });
+    console.log("Document written with ID: ", docRef.id);
+    return docRef.id;
   }
   return (
     <>
@@ -578,6 +600,17 @@ const Report: React.FC = () => {
                     onChange={handleInputChange}
                     placeholder="Any additional context, concerns, or information you'd like to provide"
                   ></textarea>
+                </div>
+
+                <div>
+                  <label htmlFor="individuals">Number of individuals involved:</label>
+                  <input
+                    id="individuals"
+                    type="number"
+                    min="0"
+                    value={individualsInvolved}
+                    onChange={handleIndividualChange}
+                  />
                 </div>
               </div>
 
