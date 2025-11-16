@@ -1,16 +1,21 @@
-import React from "react";
+import React, { useState } from "react";
 import "../css/Navigation.css";
 
 const Navigation: React.FC = () => {
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const handleHamburgerClick = () => setMobileOpen(!mobileOpen);
   return (
     <>
       <div className="scroll-indicator"></div>
       <nav>
         <div className="nav-container">
           <a href="./#home" className="logo">
-            Red<span className="highlight">Report </span>
+            Red<span className="highlight"> Report </span>
           </a>
-          <ul className="nav-links">
+          <div className="hamburger" onClick={handleHamburgerClick}>
+            <span className="hamburger-icon">☰</span>
+          </div>
+          <ul className={`nav-links${mobileOpen ? " open" : ""}`}>
             <li>
               <a href="./#home">Home</a>
             </li>
@@ -23,6 +28,11 @@ const Navigation: React.FC = () => {
             <li>
               <a href="/report" className="report-btn">
                 REPORT
+              </a>
+            </li>
+            <li>
+              <a href="/map" className="map-btn">
+                MAP
               </a>
             </li>
           </ul>

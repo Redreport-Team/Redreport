@@ -20,7 +20,7 @@ const Timeline: React.FC = () => {
           <div className="timeline-content">
             <h3>Phase 1: Idea phase</h3>
             <p>
-              Redreport started coming to life in notes rough prototypes and
+              RedReport started coming to life in notes rough prototypes and
               small user tests.
             </p>
           </div>
@@ -55,10 +55,22 @@ const Timeline: React.FC = () => {
         <div className="timeline-item">
           <div className="timeline-dot"></div>
           <div className="timeline-content">
-            <h3>Phase 4: Expansion</h3>
+            <h3>Phase 4: Analyze Campus Behavior & Take Action</h3>
             <p>
-              Grow team, and develop ties with campus administration to amplify
-              Redreport's impact.
+              Prepare reports, establish communication with dorms, and share
+              insights on specific campus trends with the community.
+            </p>
+          </div>
+        </div>
+        <div className="timeline-item">
+          <div className="timeline-dot"></div>
+          <div className="timeline-content">
+            <h3>Phase 5: Expansion</h3>
+            <p>
+              Transform RedReport into a crowdsourced tool as a universal
+              reporting system for included campus, offices ad residencial
+              areas. Allowing individuals to review a community's in addition to
+              their offerings.
             </p>
           </div>
         </div>

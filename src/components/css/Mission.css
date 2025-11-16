@@ -21,7 +21,6 @@
 .section-header h2 {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #113052;
   margin-bottom: 1rem;
 }
 
@@ -43,11 +42,9 @@
   border-radius: 15px;
   box-shadow: 0 5px 20px rgba(17, 48, 82, 0.1);
   transition: all 0.3s ease;
-  border-left: 4px solid #d82f25;
 }
 
 .mission-card:hover {
-  transform: translateY(-5px);
   box-shadow: 0 10px 30px rgba(17, 48, 82, 0.15);
 }
 
