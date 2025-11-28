@@ -174,7 +174,6 @@
 .form-btn:hover {
   outline: none;
   border-color: #d82f25;
-  box-shadow: 0 0 0 3px rgba(216, 47, 37, 0.1);
 }
 
 .form-group textarea {
@@ -250,13 +249,11 @@
 .btn-primary {
   background: #d82f25;
   color: white;
-  box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
 }
 
 .btn-primary:hover {
   background: #b82620;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(216, 47, 37, 0.4);
 }
 
 .btn-secondary {

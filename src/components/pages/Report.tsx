@@ -40,7 +40,10 @@ const Report: React.FC = () => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
 
   const specificInputRef = useRef<HTMLInputElement | null>(null);
-  const[individualsInvolved, setIndividualsInvolved] = useState<number | ''>('');
+  const [individualsInvolved, setIndividualsInvolved] = useState<number | "">(
+    ""
+  );
+
   const { executeRecaptcha } = useGoogleReCaptcha();
 
   const totalSteps = 4;
@@ -141,7 +144,7 @@ const Report: React.FC = () => {
       return;
     }
     //const finalRiskScore = calculateNewRisk(riskScore, individualsInvolved as number);
-    
+
     /*const finalReportData = {
       location: location,
       incidentType: incidentType,
@@ -149,34 +152,47 @@ const Report: React.FC = () => {
       individualsInvolved: individualsInvolved,
       riskScore = finalRiskScore;
     }*/
+
     setIsSubmitting(true);
 
-    // Simulate form submission
-    setTimeout(async () => {
+    try {
       const id: string = await SubmitReport();
+
       if (id === "Error") {
         alert(
           "There was an error submitting your report. Please try again later."
         );
+        setIsSubmitting(false);
         return;
       }
+
       setReportId(id);
       setCurrentStep(5);
+    } catch (error) {
+      console.error("Submit error:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "An unexpected error occurred. Please try again."
+      );
+    } finally {
       setIsSubmitting(false);
-    }, 2000);
+    }
   };
 
-  const handleIndividualChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleIndividualChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     // Makes sure that the input individuals value by the user is not negative
     //console.log(event.target.value);
     const value = parseInt(event.target.value, 10);
     //console.log(isNaN(value) || value < 0 ? '' : value);
-    setIndividualsInvolved(isNaN(value) || value < 0 ? '' : value);
-    setFormData((prev) => ( {
+    setIndividualsInvolved(isNaN(value) || value < 0 ? "" : value);
+    setFormData((prev) => ({
       ...prev,
       individualsInvolved: value,
-    }))
-  }
+    }));
+  };
 
   const formatLocation = (location: string): string => {
     return location.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase());
@@ -295,23 +311,47 @@ const Report: React.FC = () => {
       }
     }
   };
-  async function SubmitReport() {
-    console.log(formData);
-    if (!executeRecaptcha) {
-      console.warn("reCAPTCHA execution not ready yet.");
-      return "Error";
+  async function SubmitReport(): Promise<string> {
+    try {
+      // Validate reCAPTCHA is ready
+      if (!executeRecaptcha) {
+        console.error("reCAPTCHA not initialized");
+        throw new Error(
+          "Security verification not ready. Please refresh and try again."
+        );
+      }
+
+      // Generate reCAPTCHA token for this specific action
+      const recaptchaToken = await executeRecaptcha("submit_report");
+
+      if (!recaptchaToken) {
+        throw new Error("Failed to generate security token");
+      }
+
+      console.log("✓ reCAPTCHA token generated");
+
+      // App Check automatically attaches its token to this request
+      // No need to manually include it
+      const docRef = await addDoc(collection(db, "reports"), {
+        ...formData,
+        // Include reCAPTCHA token for backend verification
+        recaptchaToken: recaptchaToken,
+        // Metadata for debugging
+        submittedAt: serverTimestamp(),
+        userAgent: navigator.userAgent,
+      });
+
+      console.log("✓ Document written with ID:", docRef.id);
+      return docRef.id;
+    } catch (error) {
+      console.error("✗ Error submitting report:", error);
+
+      // Provide user-friendly error messages
+      if (error instanceof Error) {
+        throw new Error(`Failed to submit report: ${error.message}`);
+      }
+      throw new Error("An unexpected error occurred. Please try again.");
     }
-
-    const token = await executeRecaptcha("submit_report");
-    const docRef = await addDoc(collection(db, "reports"), {
-      ...formData,
-      recaptchaToken: token,
-      action: "submit_report",
-
-      createdAt: serverTimestamp(),
-    });
-    console.log("Document written with ID: ", docRef.id);
-    return docRef.id;
   }
   return (
     <>
@@ -603,7 +643,9 @@ const Report: React.FC = () => {
                 </div>
 
                 <div>
-                  <label htmlFor="individuals">Number of individuals involved:</label>
+                  <label htmlFor="individuals">
+                    Number of individuals involved:
+                  </label>
                   <input
                     id="individuals"
                     type="number"
@@ -685,11 +727,9 @@ const Report: React.FC = () => {
                   {currentStep === 4 && (
                     <button
                       type="submit"
-                      className="btn btn-primary g-recaptcha"
+                      className="btn btn-primary"
                       disabled={isSubmitting}
-                      data-sitekey="6LeMDQssAAAAAC3prYanNGr6ItRklzJicu190qUc"
-                      data-callback="onSubmit"
-                      data-action="submit"
+                      aria-label="Submit Anonymous Report"
                     >
                       {!isSubmitting && <span>Submit Anonymous Report</span>}
                       {isSubmitting && (

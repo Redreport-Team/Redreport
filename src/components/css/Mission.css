@@ -68,7 +68,6 @@
   color: white;
   padding: 2rem;
   border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
   transition: transform 0.3s ease;
 }
 

@@ -32,25 +32,27 @@ requiredEnvVars.forEach((varName) => {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
-// Initialize AppCheck with reCAPTCHA v3
-setTimeout(() => {
-  try {
-    initializeAppCheck(app, {
-      provider: new ReCaptchaV3Provider(
-        import.meta.env.VITE_RECAPTCHA_SITE_KEY
-      ),
-      isTokenAutoRefreshEnabled: true,
-    });
-    console.log("AppCheck initialized successfully");
-  } catch (error) {
-    console.warn("AppCheck initialization error:", error);
-  }
-}, 100);
 
 // Initialize Analytics only in browser environment
 let analytics: Analytics | null = null;
 if (typeof window !== "undefined") {
   analytics = getAnalytics(app);
+
+  // Initialize AppCheck AFTER DOM is ready
+  // App Check will automatically attach tokens to all Firestore requests
+  window.addEventListener("DOMContentLoaded", () => {
+    try {
+      initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(
+          import.meta.env.VITE_RECAPTCHA_SITE_KEY
+        ),
+        isTokenAutoRefreshEnabled: true,
+      });
+      console.log("✓ App Check initialized with reCAPTCHA v3");
+    } catch (error) {
+      console.error("✗ App Check initialization failed:", error);
+    }
+  });
 }
 
 export { db, app, auth, analytics };

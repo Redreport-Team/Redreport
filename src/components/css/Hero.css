@@ -47,13 +47,11 @@
   transition: all 0.3s ease;
   text-decoration: none;
   display: inline-block;
-  box-shadow: 0 4px 15px rgba(216, 47, 37, 0.3);
 }
 
 .cta-button:hover {
   background: #b82620;
   transform: translateY(-3px);
-  box-shadow: 0 8px 25px rgba(216, 47, 37, 0.4);
 }
 
 .hero-visual {
@@ -70,7 +68,6 @@
   border: 4px solid #d82f25;
   overflow: hidden;
   position: relative;
-  box-shadow: 0 10px 30px rgba(216, 47, 37, 0.2);
   animation: float 6s ease-in-out infinite;
 }
 

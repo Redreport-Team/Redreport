@@ -23,9 +23,6 @@ const Navigation: React.FC = () => {
               <a href="./#mission">Mission</a>
             </li>
             <li>
-              <a href="./#offense-classification">Offense Classification</a>
-            </li>
-            <li>
               <a href="./#timeline">Timeline</a>
             </li>
             <li>

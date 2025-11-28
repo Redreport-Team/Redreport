@@ -43,7 +43,6 @@ nav {
   border-radius: 25px;
   font-weight: 700;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 4px rgba(216, 47, 37, 0.3);
 }
 .map-btn {
   background: white;
@@ -102,7 +101,6 @@ nav {
     width: 70vw;
     max-width: 320px;
     background: #fff;
-    box-shadow: -2px 0 12px rgba(0, 0, 0, 0.08);
     height: calc(100vh - 60px);
     align-items: flex-start;
     gap: 1.5rem;
