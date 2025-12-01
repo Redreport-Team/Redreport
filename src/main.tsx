@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./components/pages/LandingPage";
 import Report from "./components/pages/Report";
 import Map from "./components/pages/Map";
+import Dashboard from "./components/Features/Matus/Dashboard";
 import Clarity from "@microsoft/clarity";
 import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 
@@ -23,6 +24,8 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="/client/report" element={<Report />} />
           <Route path="/map" element={<Map />} />
           <Route path="/client/map" element={<Map />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/client/dashboard" element={<Dashboard />} />
         </Routes>
       </BrowserRouter>
     </GoogleReCaptchaProvider>
