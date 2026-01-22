@@ -113,6 +113,7 @@ function Dashboard() {
           );
         }
 
+        //TODO: make this dynamic
         if (
           (year === currentYear && month === currentMonth - 1) ||
           (currentMonth === 0 && month === 11 && year === currentYear - 1)
