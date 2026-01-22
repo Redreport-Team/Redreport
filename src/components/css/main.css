@@ -1,0 +1,63 @@
+/* 
+Comment Key:
+
+* Main Class Group
+** Sub Class Group 
+*** Specific Class Group
+
+q: fast
+s: slow
+
+1: 5px
+2: 10px
+3: 20px
+...
+
+*/
+
+/* Page Setup */
+:root{
+    --primary-color: #d82f25;
+    --secondary-color: #113052;
+    --text-color: #113052;
+    --background-color: rgb(255, 255, 255);
+}
+body {
+  margin: 0;
+  padding: 0;
+}
+
+.background {
+    background: var(--background-color);
+}
+
+/* Element Styles*/ 
+nav {
+  top: 0;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* General Styling */
+.w-100 {
+    width: 100%;
+}
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 2rem;
+}
+
+.front-layer {
+    z-index: 10;
+}
+
+
+/* Animation Classes */
+.q-transition {
+  transition: all 0.5s linear;
+  -webkit-transition: all 0.5s linear;
+  -moz-transition: all 0.5s linear;
+  -ms-transition: all 0.5s linear;
+  -o-transition: all 0.5s linear;
+}

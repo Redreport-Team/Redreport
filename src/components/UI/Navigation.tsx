@@ -26,6 +26,9 @@ const Navigation: React.FC = () => {
               <a href="./#timeline">Timeline</a>
             </li>
             <li>
+              <a href="./#Help">Guidance</a>
+            </li>
+            <li>
               <a href="/report" className="report-btn">
                 REPORT
               </a>
