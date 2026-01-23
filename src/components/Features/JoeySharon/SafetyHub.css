@@ -1,6 +1,7 @@
 /*****        CSS File Created for Joey & Sharon      *****/
 /****      Handles styling, colors and positioning    ***/
 
+
 ReplaceWithHTMLElement {
   color: transparent;
 }
@@ -9,52 +10,37 @@ ReplaceWithHTMLElement {
   color: transparent;
 }
 
-#safey-resources {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
+.resource {
+  max-width: 100vw !important;
 }
-
-#sexual-harassment {
+.mainResource {
   background: linear-gradient(135deg, #d82f25, #b82620);
   color: white;
-  padding: 2rem;
+  padding: 1rem;
   border-radius: 15px;
   box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
   transition: transform 0.3s ease;
   margin-bottom: 20px;
+  margin: 5px;
+  height: 100%;
+  width: 100%;
 }
 
-#discrimination {
-  background: linear-gradient(135deg, #d82f25, #b82620);
+.mainResource h2 {
   color: white;
-  padding: 2rem;
-  border-radius: 15px;
-  box-shadow: 0 5px 20px rgba(216, 47, 37, 0.3);
-  transition: transform 0.3s ease;
-  margin-bottom: 20px;
 }
 
-#sexual-harassment a,
-#discrimination a {
+.mainResource a {
   color: white;
   text-decoration: underline;
 }
 
-#sexual-harassment:hover a,
-#discrimination:hover a{
-  color: black;
+.mainResource:hover {
+  transform: scale(1.05);
 }
 
-#sexual-harassment:hover,
-#discrimination:hover {
-    transform: scale(1.05);
-}
-
-#resources {
-  display: grid;
-  grid-template-columns: 1.5fr 1fr 1fr;
-  gap: 24px;
+.links {
+  width: 100%;
 }
 
 #non-confidential-resources,
@@ -102,16 +88,7 @@ ReplaceWithHTMLElement {
 #confidential-resources li {
   margin: 0.4rem 0;
   line-height: 1.5;
-}
-
-#confidential-resources a {
-  color: rgb(215, 3, 3);
-  text-decoration: underline;
-  font-weight: 500;
-}
-
-#confidential-resources a:hover {
-  color: black;
+  font-size: 80%;
 }
 
 #confidential-resources,
@@ -136,6 +113,6 @@ ReplaceWithHTMLElement {
 #confidential-resources a:hover,
 #non-confidential-resources a:hover,
 #off-campus-resources a:hover {
-  color: black;
+  color: rgb(122, 0, 0);
 }
 /*****        CSS File Created for Joey & Sharon      *****/

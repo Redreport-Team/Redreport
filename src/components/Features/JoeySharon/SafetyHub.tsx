@@ -10,23 +10,25 @@ function SafetyHub() {
       <div className="" id = "safety-resources">
         <h1>Safety and Resources</h1>
 
-        <div className="" id = "sexual-harassment">
+      <div className="row">
+        <div className="mainResource" id = "sexual-harassment">
           <h2>Sexual Harassment</h2>
            <ul>
             <a href="https://equity.nd.edu/sexual-misconduct-titleix/">Notre Dame Office of Institutional Equity Sexual Harassment Resources</a>
            </ul>
         </div>
         
-        <div className="" id = "discrimination">
+        <div className="mainResource" id = "discrimination">
            <h2>Discrimination</h2>
             <ul>
               <a href="https://equity.nd.edu/discriminatory-harassment/">Notre Dame Office of Institutional Equity Discrimination Resources</a>
             </ul>
         </div>
+      </div>
 
-        <div className="" id = "resources">
+        <div className="row" id = "resources">
 
-          <div className="" id = "confidential-resources">
+          <div className="links" id = "confidential-resources">
             <h2>Confidential Resources</h2>
 
             <div className="" id = "subsection">
@@ -62,7 +64,7 @@ function SafetyHub() {
 
           </div>
 
-          <div className="" id = "non-confidential-resources">
+          <div className="links" id = "non-confidential-resources">
             <h2>Non-Confidential Resources</h2>
               
               <div className="" id = "subsection">
@@ -88,7 +90,7 @@ function SafetyHub() {
 
           </div>
 
-          <div className="" id = "off-campus-resources">
+          <div className="links" id = "off-campus-resources">
             <h2>Off-Campus Resources</h2>
 
             <div className="" id = "subsection">
