@@ -3,26 +3,11 @@ import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import { campuses, allBuildings } from "../../types/locations.ts";
-import {
-  collection,
-  query,
-  where,
-  QueryConstraint,
-  getDocs,
-  Timestamp,
-} from "firebase/firestore";
 import { db } from "../../config/firebase.ts";
 import "../../components/css/Map.css";
+import { Case } from "../../types/case.ts";
+import getData from "../../config/getData.tsx";
 
-interface Case {
-  campus: string;
-  location: string;
-  specificLocation: string;
-  offenseTypes: string[];
-  time: string;
-  createdAt: Timestamp;
-  additionalInfo: string;
-}
 
 interface MapPoint {
   buildingName: string;
@@ -52,7 +37,7 @@ const incidentTypes = [
   { id: 4, name: "discrimination", color: "#1d1a05" },
 ];
 
-function Map() {
+async function Map() {
   const [Points, SetPoints] = useState<Case[]>([]);
   const [MapPoints, setMapPoints] = useState<{
     [key: string]: MapPoint;
@@ -72,44 +57,32 @@ function Map() {
 
   // Initiate Map
   useEffect(() => {
-    // Fetch Data from Firebase and set it as <Point> type
-    const getData = async () => {
-      try {
-        const reportsRef = collection(db, "reports");
-        const q = query(reportsRef);
-        const querySnapshot = await getDocs(q);
-        console.log(
-          "Firebase Points: ",
-          querySnapshot.docs.map((doc) => doc.data() as Case)
-        );
-        SetPoints(querySnapshot.docs.map((doc) => doc.data() as Case));
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching incidents:", error);
-        setError("Failed to fetch incident data");
-        setLoading(false);
+    const fetchDataAndInitializeMap = async () => {
+      // Fetch Data from Firebase and set it as <Point> type
+      SetPoints(await getData());
+      // Call above function
+      
+
+      // Set up Map using MapTilerSDK and Leaflet
+      if (!mapRef.current) {
+        mapRef.current = L.map("map", { maxZoom: 19 })
+          .setView([41.7002, -86.2379], 15)
+          .setMinZoom(15)
+          .setMaxBounds([
+            [41.7852, -86.1779],
+            [41.5852, -86.2879],
+          ]);
+
+        new MaptilerLayer({
+          style: "streets-v2",
+          apiKey: import.meta.env.VITE_MAP_KEY,
+        }).addTo(mapRef.current);
+
+        circlesRef.current = L.layerGroup().addTo(mapRef.current!);
       }
     };
-    // Call above function
-    getData();
 
-    // Set up Map using MapTilerSDK and Leaflet
-    if (!mapRef.current) {
-      mapRef.current = L.map("map", { maxZoom: 19 })
-        .setView([41.7002, -86.2379], 15)
-        .setMinZoom(15)
-        .setMaxBounds([
-          [41.7852, -86.1779],
-          [41.5852, -86.2879],
-        ]);
-
-      new MaptilerLayer({
-        style: "streets-v2",
-        apiKey: import.meta.env.VITE_MAP_KEY,
-      }).addTo(mapRef.current);
-
-      circlesRef.current = L.layerGroup().addTo(mapRef.current!);
-    }
+    fetchDataAndInitializeMap();
   }, []);
 
   useEffect(() => {

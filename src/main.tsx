@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import LandingPage from "./components/pages/LandingPage";
 import Report from "./components/pages/Report";
 import Map from "./components/pages/Map";
-import Dashboard from "./components/Features/Matus/Dashboard";
+import Dashboard from "./components/Features/Katie/Dashboard";
 import Clarity from "@microsoft/clarity";
 import { GoogleReCaptchaProvider } from "react-google-recaptcha-v3";
 
