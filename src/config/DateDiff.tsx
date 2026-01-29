@@ -1,4 +1,6 @@
-function getEstimatedDays(report: Case): number {
+
+import { Case } from "./case.ts";
+export default function getEstimatedDays(report: Case): number {
     const reportTime = report.createdAt.toMillis();
     const today = Date.now();
     const day = 24 * 60 * 60 * 1000;

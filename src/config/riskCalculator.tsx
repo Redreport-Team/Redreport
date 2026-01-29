@@ -1,3 +1,6 @@
+
+import { Case } from "./case.ts";
+import getEstimatedDays from "./DateDiff.tsx";
 export default function calculateRiskScore(reports: Case[]): [number, number] {
     let totalPoints = 0;
     let recentCases = 0;
