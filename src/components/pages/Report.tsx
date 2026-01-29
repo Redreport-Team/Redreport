@@ -297,15 +297,16 @@ const Report: React.FC = () => {
   };
   async function SubmitReport() {
     console.log(formData);
-    if (!executeRecaptcha) {
-      console.warn("reCAPTCHA execution not ready yet.");
-      return "Error";
-    }
+  
+  //  if (!executeRecaptcha) {
+  //    console.warn("reCAPTCHA execution not ready yet.");
+  //    return "Error";
+  //  }
 
-    const token = await executeRecaptcha("submit_report");
+ //  const token = await executeRecaptcha("submit_report");
     const docRef = await addDoc(collection(db, "reports"), {
       ...formData,
-      recaptchaToken: token,
+ //     recaptchaToken: token,
       action: "submit_report",
 
       createdAt: serverTimestamp(),

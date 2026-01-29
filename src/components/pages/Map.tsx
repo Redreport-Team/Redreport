@@ -20,6 +20,7 @@ interface Case {
   specificLocation: string;
   offenseTypes: string[];
   time: string;
+  individualsInvolved: number;
   createdAt: Timestamp;
   additionalInfo: string;
 }
@@ -34,6 +35,7 @@ interface MapPoint {
   campus: string;
   buildingType: string;
   recentIncidents: Case[];
+  individualsInvolved: number;
 }
 
 interface FilterState {
@@ -128,6 +130,8 @@ function Map() {
         (building: any) => building.name === point.specificLocation
       );
 
+      const individualsInvolved = point.individualsInvolved;
+      console.log(individualsInvolved);
       // Incident types
       const TempIncidentCounts: { [key: string]: number } = {
         "uncomfortable-situation": 0,
@@ -176,6 +180,7 @@ function Map() {
           campus,
           buildingType,
           recentIncidents: [point],
+          individualsInvolved,
         };
       } else {
         // Additional incident for existing building
@@ -313,8 +318,11 @@ function Map() {
       // x report in 3 days is critical
       // As days pass the weight of each report on the risk score decreases hyperbolically
       const recencyWeight = Math.min((3 / estimatedAggressionTime) * 2, 2);
+      //const individualWeight = ;
+      totalPoints += recencyWeight; // add individualWeight to totalPoints
+      const numberIndividuals = report.individualsInvolved;
 
-      totalPoints += recencyWeight;
+      totalPoints += numberIndividuals;
     }
 
     if (totalPoints === 0) {
