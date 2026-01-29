@@ -277,65 +277,6 @@ function Map() {
     return ["All", ...Array.from(months).sort().reverse()];
   };
 
-  function getEstimatedDays(report: Case): number {
-    const reportTime = report.createdAt.toMillis();
-    const today = Date.now();
-    const day = 24 * 60 * 60 * 1000;
-
-    let estimatedDays = 0;
-    // Calculate time since Report was made
-    let daysSinceReport = today - reportTime;
-
-    // Caclulate time since agression occured
-    switch (report.time) {
-      case "within-24-hours":
-        estimatedDays = (daysSinceReport + day / 2) / day;
-        break;
-      case "within-week":
-        estimatedDays = (daysSinceReport + day * 3.5) / day;
-        break;
-      case "within-month":
-        estimatedDays = (daysSinceReport + day * 15) / day;
-        break;
-      case "longer-ago":
-        estimatedDays = (daysSinceReport + day * 45) / day;
-        break;
-    }
-    return estimatedDays;
-  }
-  function calculateRiskScore(reports: Case[]): [number, number] {
-    let totalPoints = 0;
-    let recentCases = 0;
-
-    // X = Amount of reports in the last 3 days considered CRITICAL
-    const maxPointsThreshold = 12.0;
-
-    for (const report of reports) {
-      const estimatedAggressionTime = getEstimatedDays(report);
-
-      if (estimatedAggressionTime < 7) recentCases++;
-
-      // x report in 3 days is critical
-      // As days pass the weight of each report on the risk score decreases hyperbolically
-      const recencyWeight = Math.min((3 / estimatedAggressionTime) * 2, 2);
-      //const individualWeight = ;
-      totalPoints += recencyWeight; // add individualWeight to totalPoints
-      const numberIndividuals = report.individualsInvolved;
-
-      totalPoints += numberIndividuals;
-    }
-
-    if (totalPoints === 0) {
-      return [1.0, 0];
-    }
-
-    let score = 10.0 + (totalPoints / maxPointsThreshold) * 40.0;
-
-    score = Math.min(score, 50.0);
-
-    return [Math.round(score) / 10, recentCases];
-  }
-
   const applyFilters = (points: Case[]) => {
     return points.filter((point) => {
       // Campus filter

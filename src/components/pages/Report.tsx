@@ -3,7 +3,7 @@ import "../css/Report.css";
 import Navigation from "../UI/Navigation";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import { calculateNewRisk } from "./riskCalculator";
+import { calculateNewRisk } from "../../config/riskCalculator";
 import Map from "./Map";
 import { locations } from "../../types/locations";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
@@ -140,15 +140,15 @@ const Report: React.FC = () => {
     if (!validateCurrentStep()) {
       return;
     }
-    //const finalRiskScore = calculateNewRisk(riskScore, individualsInvolved as number);
+    const finalRiskScore = calculateNewRisk(riskScore, individualsInvolved as number);
     
-    /*const finalReportData = {
+    const finalReportData = {
       location: location,
       incidentType: incidentType,
       description: description, 
       individualsInvolved: individualsInvolved,
       riskScore = finalRiskScore;
-    }*/
+    }
     setIsSubmitting(true);
 
     // Simulate form submission
