@@ -38,6 +38,6 @@
     "@types/react": "^19.1.14",
     "@types/react-dom": "^19.1.9",
     "vite": "^7.1.9",
-    "wrangler": "^4.40.2"
+    "wrangler": "^4.103.0"
   }
 }
