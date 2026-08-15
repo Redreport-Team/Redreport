@@ -7,7 +7,7 @@ function OffenseClassification() {
   //HTML Code handling Visual Structure
   return (
     <>
-      <div className="section-header">
+      <div id="offense-classification" className="section-header">
         <h2>
           Offense <span className="highlight">Classification</span>
         </h2>

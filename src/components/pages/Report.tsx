@@ -1,8 +1,14 @@
 import React, { useState, useRef } from "react";
 import "../css/Report.css";
 import Navigation from "../UI/Navigation";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  type WithFieldValue,
+} from "firebase/firestore";
 import { db } from "../../config/firebase";
+import { reportConverter, type ReportDoc } from "../../types/report";
 import { calculateNewRisk } from "./riskCalculator";
 import Map from "./Map";
 import { locations } from "../../types/locations";
@@ -48,8 +54,11 @@ const Report: React.FC = () => {
 
   const totalSteps = 4;
 
-  var [categories, setCategories] = useState<Record<string, any>>(
-    Object.values(locations["Notre-Dame"])
+  // Keyed by building type ("Residence Halls", ...) because the dropdown below
+  // renders Object.keys(categories). Seeding this with Object.values() made
+  // those keys array indices, so the list showed "0", "1", "2".
+  const [categories, setCategories] = useState<Record<string, any>>(
+    locations["Notre-Dame"]
   );
 
   // Form Handlers
@@ -79,8 +88,10 @@ const Report: React.FC = () => {
       }));
       setSuggestions([]); // Clear suggestions when campus changes
     } else if (name === "location") {
-      // When building type is selected, update suggestions with building names
-      const buildingTypeLocations = categories[value];
+      // When building type is selected, update suggestions with building names.
+      // Campuses with no buildings yield no entry here, so default to empty
+      // rather than calling .map() on undefined.
+      const buildingTypeLocations = categories[value] ?? [];
       setSuggestions(
         buildingTypeLocations.map((building: any) => building.name)
       );
@@ -330,16 +341,23 @@ const Report: React.FC = () => {
 
       console.log("✓ reCAPTCHA token generated");
 
-      // App Check automatically attaches its token to this request
-      // No need to manually include it
-      const docRef = await addDoc(collection(db, "reports"), {
+      // Typed against the shared schema: dropping or renaming a field here is a
+      // compile error, because Map.tsx reads through the same ReportDoc type.
+      const payload: WithFieldValue<ReportDoc> = {
         ...formData,
         // Include reCAPTCHA token for backend verification
         recaptchaToken: recaptchaToken,
         // Metadata for debugging
-        submittedAt: serverTimestamp(),
+        createdAt: serverTimestamp(),
         userAgent: navigator.userAgent,
-      });
+      };
+
+      // App Check automatically attaches its token to this request
+      // No need to manually include it
+      const docRef = await addDoc(
+        collection(db, "reports").withConverter(reportConverter),
+        payload
+      );
 
       console.log("✓ Document written with ID:", docRef.id);
       return docRef.id;

@@ -1,47 +1,20 @@
-import L, { Point } from "leaflet";
+import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import { campuses, allBuildings } from "../../types/locations.ts";
-import {
-  collection,
-  query,
-  where,
-  QueryConstraint,
-  getDocs,
-  Timestamp,
-} from "firebase/firestore";
+import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "../../config/firebase.ts";
+import { isUsableReport, reportConverter } from "../../types/report.ts";
+import type { ReportDoc } from "../../types/report.ts";
+import {
+  buildMapPoints,
+  buildingsForCampus,
+  calculateRiskScore,
+  getAvailableMonths,
+} from "./mapLogic.ts";
+import type { Building, FilterState, MapPoint } from "./mapLogic.ts";
 import "../../components/css/Map.css";
-
-interface Case {
-  campus: string;
-  location: string;
-  specificLocation: string;
-  offenseTypes: string[];
-  time: string;
-  createdAt: Timestamp;
-  additionalInfo: string;
-}
-
-interface MapPoint {
-  buildingName: string;
-  coordinates: [number, number];
-  totalIncidents: number;
-  incidentCounts: {
-    [key: string]: number; // Type -> Count
-  };
-  campus: string;
-  buildingType: string;
-  recentIncidents: Case[];
-}
-
-interface FilterState {
-  selectedCampus: string;
-  selectedMonth: string;
-  selectedTypes: string[];
-  showMenu: boolean;
-}
 
 // Incident type options
 const incidentTypes = [
@@ -53,7 +26,7 @@ const incidentTypes = [
 ];
 
 function Map() {
-  const [Points, SetPoints] = useState<Case[]>([]);
+  const [Points, SetPoints] = useState<ReportDoc[]>([]);
   const [MapPoints, setMapPoints] = useState<{
     [key: string]: MapPoint;
   }>({});
@@ -75,14 +48,14 @@ function Map() {
     // Fetch Data from Firebase and set it as <Point> type
     const getData = async () => {
       try {
-        const reportsRef = collection(db, "reports");
+        const reportsRef = collection(db, "reports").withConverter(
+          reportConverter
+        );
         const q = query(reportsRef);
         const querySnapshot = await getDocs(q);
-        console.log(
-          "Firebase Points: ",
-          querySnapshot.docs.map((doc) => doc.data() as Case)
-        );
-        SetPoints(querySnapshot.docs.map((doc) => doc.data() as Case));
+        // Skip legacy/malformed docs missing a valid createdAt Timestamp —
+        // reading .toMillis() on those would throw during render and blank the page.
+        SetPoints(querySnapshot.docs.map((doc) => doc.data()).filter(isUsableReport));
         setLoading(false);
       } catch (error) {
         console.error("Error fetching incidents:", error);
@@ -117,87 +90,14 @@ function Map() {
     initializeMapPoints();
   }, [Points, filters]);
 
-  // Convert points from Firebase : <Case> into complete <MapPoints> with firebase.ts
-  const MapPointConversion = () => {
-    const TempMapPoints: { [key: string]: MapPoint } = {};
-    // Get points that fit filter criteria
-    const filteredPoints = applyFilters(Points);
-    filteredPoints.forEach((point) => {
-      // Find the building in allBuildings with the same specificLocation name
-      const location = allBuildings.find(
-        (building: any) => building.name === point.specificLocation
-      );
-
-      // Incident types
-      const TempIncidentCounts: { [key: string]: number } = {
-        "uncomfortable-situation": 0,
-        "sexual-misconduct": 0,
-        "physical-aggression": 0,
-        "verbal-aggression": 0,
-        discrimination: 0,
-      };
-
-      // For totalIncidents, increment if already present for this buildingName
-      const totalIncidents = TempMapPoints[point.specificLocation]
-        ?.totalIncidents
-        ? TempMapPoints[point.specificLocation].totalIncidents + 1
-        : 1;
-      const incidentCounts: { [key: string]: number } = {
-        ...TempIncidentCounts,
-      };
-
-      // Key properties from Case and building
-      const buildingName =
-        point.specificLocation || location?.name || "Unknown Location";
-
-      const coordinates: [number, number] =
-        location &&
-        typeof location.latitude === "number" &&
-        typeof location.longitude === "number"
-          ? [location.latitude, location.longitude]
-          : [0, 0];
-      const campus = point.campus || location?.campus || "Unknown Campus";
-      const buildingType =
-        location?.type || location?.buildingType || "Unknown Type";
-
-      if (!TempMapPoints[buildingName]) {
-        // First incident for this building
-        TempMapPoints[buildingName] = {
-          buildingName,
-          coordinates,
-          totalIncidents: 1,
-          incidentCounts: {
-            "uncomfortable-situation": 0,
-            "sexual-misconduct": 0,
-            "physical-aggression": 0,
-            "verbal-aggression": 0,
-            discrimination: 0,
-          },
-          campus,
-          buildingType,
-          recentIncidents: [point],
-        };
-      } else {
-        // Additional incident for existing building
-        TempMapPoints[buildingName].totalIncidents++;
-        TempMapPoints[buildingName].recentIncidents.push(point);
-      }
-      // Increment incident type counts (fixed operator)
-      if (point.offenseTypes) {
-        point.offenseTypes.forEach((type) => {
-          if (TempMapPoints[buildingName].incidentCounts[type] !== undefined) {
-            TempMapPoints[buildingName].incidentCounts[type]++; // Fixed!
-          }
-        });
-      }
-    });
-    setMapPoints(TempMapPoints);
-    return TempMapPoints;
-  };
-
   // Add individual MapPoints to the Map as circles
   const initializeMapPoints = () => {
-    const CurrentMapPoints = MapPointConversion();
+    const CurrentMapPoints = buildMapPoints(
+      Points,
+      filters,
+      allBuildings as Building[]
+    );
+    setMapPoints(CurrentMapPoints);
 
     // Clear any circles present
     if (circlesRef.current) circlesRef.current?.clearLayers();
@@ -259,110 +159,6 @@ function Map() {
     });
   };
 
-  // Get available months from data for FilterMenu
-  const getAvailableMonths = () => {
-    const months = new Set<string>();
-    Points.forEach((point) => {
-      const date = new Date(point.createdAt.toMillis());
-      const monthYear = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-      months.add(monthYear);
-    });
-    return ["All", ...Array.from(months).sort().reverse()];
-  };
-
-  function getEstimatedDays(report: Case): number {
-    const reportTime = report.createdAt.toMillis();
-    const today = Date.now();
-    const day = 24 * 60 * 60 * 1000;
-
-    let estimatedDays = 0;
-    // Calculate time since Report was made
-    let daysSinceReport = today - reportTime;
-
-    // Caclulate time since agression occured
-    switch (report.time) {
-      case "within-24-hours":
-        estimatedDays = (daysSinceReport + day / 2) / day;
-        break;
-      case "within-week":
-        estimatedDays = (daysSinceReport + day * 3.5) / day;
-        break;
-      case "within-month":
-        estimatedDays = (daysSinceReport + day * 15) / day;
-        break;
-      case "longer-ago":
-        estimatedDays = (daysSinceReport + day * 45) / day;
-        break;
-    }
-    return estimatedDays;
-  }
-  function calculateRiskScore(reports: Case[]): [number, number] {
-    let totalPoints = 0;
-    let recentCases = 0;
-
-    // X = Amount of reports in the last 3 days considered CRITICAL
-    const maxPointsThreshold = 12.0;
-
-    for (const report of reports) {
-      const estimatedAggressionTime = getEstimatedDays(report);
-
-      if (estimatedAggressionTime < 7) recentCases++;
-
-      // x report in 3 days is critical
-      // As days pass the weight of each report on the risk score decreases hyperbolically
-      const recencyWeight = Math.min((3 / estimatedAggressionTime) * 2, 2);
-
-      totalPoints += recencyWeight;
-    }
-
-    if (totalPoints === 0) {
-      return [1.0, 0];
-    }
-
-    let score = 10.0 + (totalPoints / maxPointsThreshold) * 40.0;
-
-    score = Math.min(score, 50.0);
-
-    return [Math.round(score) / 10, recentCases];
-  }
-
-  const applyFilters = (points: Case[]) => {
-    return points.filter((point) => {
-      // Campus filter
-      if (filters.selectedCampus !== "All") {
-        const campusData = campuses.find(
-          (building) => building === point.campus
-        );
-        if (!campusData || campusData !== filters.selectedCampus) {
-          return false;
-        }
-      }
-
-      // Month filter
-      if (filters.selectedMonth !== "All") {
-        const pointDate = new Date(point.createdAt.toMillis());
-        const pointMonth = `${pointDate.getFullYear()}-${String(
-          pointDate.getMonth() + 1
-        ).padStart(2, "0")}`;
-        if (pointMonth !== filters.selectedMonth) {
-          return false;
-        }
-      }
-
-      // Type filter
-      if (
-        filters.selectedTypes.length > 0 &&
-        !filters.selectedTypes.some((type) => point.offenseTypes.includes(type))
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  };
-
   // Handle filter changes
   const handleFilterChange = (
     filterType: keyof FilterState,
@@ -391,8 +187,9 @@ function Map() {
     if (campus === "All") {
       mapRef.current.setView([41.7002, -86.2379], 15);
     } else {
-      const campusbuildings = allBuildings.filter(
-        (building) => building.location === campus
+      const campusbuildings = buildingsForCampus(
+        allBuildings as Building[],
+        campus
       );
       if (campusbuildings.length > 0) {
         const bounds = L.latLngBounds(
@@ -530,7 +327,7 @@ function Map() {
                 }
                 className="form-select"
               >
-                {getAvailableMonths().map((month) => (
+                {getAvailableMonths(Points).map((month) => (
                   <option key={month} value={month}>
                     {month === "All" ? "All Time" : month}
                   </option>
