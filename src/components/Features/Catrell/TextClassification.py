@@ -15,7 +15,7 @@ load_dotenv()
 response = requests.post(
   url="https://openrouter.ai/api/v1/chat/completions",
   headers={
-"Authorization": "Bearer " + os.getenv("OPENROUTER_API_KEY"), # Access variables using os.getenv fro .env file
+"Authorization": "Bearer " + os.getenv("OPEN_ROUTER_KEY"), # Access variables using os.getenv fro .env file
     "HTTP-Referer": "reddot.report", # Optional. Site URL for rankings on openrouter.ai.
     "X-Title": "RedReport", # Optional. Site title for rankings on openrouter.ai.
   },

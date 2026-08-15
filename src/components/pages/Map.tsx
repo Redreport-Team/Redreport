@@ -1,17 +1,19 @@
-import L, { Point } from "leaflet";
+import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
 import "leaflet/dist/leaflet.css";
 import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
 import { campuses, allBuildings } from "../../types/locations.ts";
-import {
-  collection,
-  query,
-  where,
-  QueryConstraint,
-  getDocs,
-  Timestamp,
-} from "firebase/firestore";
+import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "../../config/firebase.ts";
+import { isUsableReport, reportConverter } from "../../types/report.ts";
+import type { ReportDoc } from "../../types/report.ts";
+import {
+  buildMapPoints,
+  buildingsForCampus,
+  calculateRiskScore,
+  getAvailableMonths,
+} from "./mapLogic.ts";
+import type { Building, FilterState, MapPoint } from "./mapLogic.ts";
 import "../../components/css/Map.css";
 
 interface Case {
@@ -55,7 +57,7 @@ const incidentTypes = [
 ];
 
 function Map() {
-  const [Points, SetPoints] = useState<Case[]>([]);
+  const [Points, SetPoints] = useState<ReportDoc[]>([]);
   const [MapPoints, setMapPoints] = useState<{
     [key: string]: MapPoint;
   }>({});
@@ -77,14 +79,14 @@ function Map() {
     // Fetch Data from Firebase and set it as <Point> type
     const getData = async () => {
       try {
-        const reportsRef = collection(db, "reports");
+        const reportsRef = collection(db, "reports").withConverter(
+          reportConverter
+        );
         const q = query(reportsRef);
         const querySnapshot = await getDocs(q);
-        console.log(
-          "Firebase Points: ",
-          querySnapshot.docs.map((doc) => doc.data() as Case)
-        );
-        SetPoints(querySnapshot.docs.map((doc) => doc.data() as Case));
+        // Skip legacy/malformed docs missing a valid createdAt Timestamp —
+        // reading .toMillis() on those would throw during render and blank the page.
+        SetPoints(querySnapshot.docs.map((doc) => doc.data()).filter(isUsableReport));
         setLoading(false);
       } catch (error) {
         console.error("Error fetching incidents:", error);
@@ -202,7 +204,12 @@ function Map() {
 
   // Add individual MapPoints to the Map as circles
   const initializeMapPoints = () => {
-    const CurrentMapPoints = MapPointConversion();
+    const CurrentMapPoints = buildMapPoints(
+      Points,
+      filters,
+      allBuildings as Building[]
+    );
+    setMapPoints(CurrentMapPoints);
 
     // Clear any circles present
     if (circlesRef.current) circlesRef.current?.clearLayers();
@@ -340,8 +347,9 @@ function Map() {
     if (campus === "All") {
       mapRef.current.setView([41.7002, -86.2379], 15);
     } else {
-      const campusbuildings = allBuildings.filter(
-        (building) => building.location === campus
+      const campusbuildings = buildingsForCampus(
+        allBuildings as Building[],
+        campus
       );
       if (campusbuildings.length > 0) {
         const bounds = L.latLngBounds(
@@ -479,7 +487,7 @@ function Map() {
                 }
                 className="form-select"
               >
-                {getAvailableMonths().map((month) => (
+                {getAvailableMonths(Points).map((month) => (
                   <option key={month} value={month}>
                     {month === "All" ? "All Time" : month}
                   </option>

@@ -160,7 +160,6 @@
 .button {
   border: none;
   border-radius: 10px;
-  box-shadow: inset 10px 10px 50px #6e6e6e65;
   width: 60vw;
   min-width: 20rem;
   height: 6vh;
@@ -253,7 +252,6 @@ h6 {
   background-color: var(--background-color);
   color: var(--accent-color);
   text-decoration: none;
-  box-shadow: none;
 }
 
 .borderred {
@@ -290,7 +288,6 @@ h6 {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(10px);
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   opacity: 0;
   pointer-events: none;
   z-index: -1;
@@ -314,14 +311,12 @@ h6 {
   border: none;
   font-size: 18px;
   cursor: pointer;
-  box-shadow: 0 4px 12px rgba(202, 60, 37, 0.3);
   transition: all 0.3s ease;
   z-index: 1002;
 }
 
 .menu-toggle-btn:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(202, 60, 37, 0.4);
 }
 
 .filter-content {
@@ -420,7 +415,6 @@ h6 {
   text-align: center;
   border-radius: 8px;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
 }
 
@@ -448,7 +442,6 @@ h6 {
   background: white;
   padding: 30px 40px;
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   font-size: 16px;
   font-weight: 600;
   color: var(--text-color);
@@ -465,7 +458,6 @@ h6 {
   border-radius: 8px;
   font-weight: 600;
   z-index: 1002;
-  box-shadow: 0 4px 12px rgba(202, 60, 37, 0.3);
 }
 
 /* Enhanced Popup Styles */
@@ -529,7 +521,6 @@ h6 {
 /* Map Popup Enhancements */
 .leaflet-popup-content-wrapper {
   border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
 }
 
 .leaflet-popup-tip {
@@ -579,14 +570,12 @@ h6 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  transition: border 0.2s, box-shadow 0.2s;
-  box-shadow: 0 0 0 1.5px #bbb;
+  transition: border 0.2s;
   position: relative;
 }
 
 .type-color-dot-circle.selected {
   border: 2.5px solid #222;
-  box-shadow: 0 0 0 2.5px #fff, 0 0 0 4px var(--accent-color, #ca3c25);
 }
 
 .type-color-dot-circle svg {
