@@ -12,7 +12,12 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     // The default `forks` pool cannot spawn workers on some Windows setups
     // (process forking fails outright); worker threads are reliable here.
+    // Spawning several at once is also flaky on constrained machines, and the
+    // suite is small enough that one worker costs nothing.
     pool: "threads",
+    poolOptions: {
+      threads: { singleThread: true },
+    },
     // src/config/firebase.ts throws at import time when these are missing, so
     // every test that transitively imports it needs them present.
     env: {

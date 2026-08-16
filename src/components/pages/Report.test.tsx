@@ -126,6 +126,22 @@ describe("Report form", () => {
     expect(payload).not.toHaveProperty("submittedAt");
   });
 
+  it("collects no browser fingerprint", async () => {
+    // The form promises that no identifying information is stored. A user agent
+    // string is a fingerprinting vector, so it must never reach Firestore.
+    const user = userEvent.setup();
+    render(<Report />);
+
+    await fillOutReport(user);
+    await user.click(
+      screen.getByRole("button", { name: /submit anonymous report/i })
+    );
+
+    const payload = addDoc.mock.calls[0][1] as Record<string, unknown>;
+    expect(payload).not.toHaveProperty("userAgent");
+    expect(JSON.stringify(payload)).not.toContain(navigator.userAgent);
+  });
+
   it("submits the answers the user actually gave", async () => {
     const user = userEvent.setup();
     render(<Report />);

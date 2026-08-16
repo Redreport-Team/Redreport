@@ -22,7 +22,6 @@ export interface StoredReport {
   additionalInfo: string;
   createdAt?: Timestamp;
   recaptchaToken?: string;
-  userAgent?: string;
 }
 
 /** A report validated as safe to work with. */

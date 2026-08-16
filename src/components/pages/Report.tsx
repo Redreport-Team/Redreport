@@ -336,9 +336,7 @@ const Report: React.FC = () => {
         ...formData,
         // Include reCAPTCHA token for backend verification
         recaptchaToken: recaptchaToken,
-        // Metadata for debugging
         createdAt: serverTimestamp(),
-        userAgent: navigator.userAgent,
       };
 
       // App Check automatically attaches its token to this request
