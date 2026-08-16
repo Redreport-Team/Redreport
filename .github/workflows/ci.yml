@@ -33,3 +33,112 @@ jobs:
       # Never deploy the artifact produced by this step.
       - name: Build
         run: npm run build
+
+  deploy:
+    name: Deploy to DreamHost
+    needs: verify
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    # Add required reviewers / branch restrictions to this environment in repo
+    # settings to gate who can trigger a production deploy.
+    environment: production
+    concurrency:
+      group: deploy-production
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # VITE_* values are inlined at build time. If any are missing, Vite emits
+      # `undefined` and the bundle builds cleanly but dies in the browser, so
+      # fail loudly here instead of shipping a broken site.
+      - name: Write .env from secrets
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          VITE_FIREBASE_MEASUREMENT_ID: ${{ secrets.VITE_FIREBASE_MEASUREMENT_ID }}
+          VITE_RECAPTCHA_SITE_KEY: ${{ secrets.VITE_RECAPTCHA_SITE_KEY }}
+          VITE_MAP_KEY: ${{ secrets.VITE_MAP_KEY }}
+          VITE_CLARITY_ID: ${{ secrets.VITE_CLARITY_ID }}
+        run: |
+          set -euo pipefail
+          required="VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN VITE_FIREBASE_PROJECT_ID VITE_RECAPTCHA_SITE_KEY VITE_MAP_KEY"
+          missing=0
+          for name in $required; do
+            if [ -z "${!name:-}" ]; then
+              echo "::error::Required secret $name is not set"
+              missing=1
+            fi
+          done
+          [ "$missing" -eq 0 ] || exit 1
+
+          for name in VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN \
+                      VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET \
+                      VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID \
+                      VITE_FIREBASE_MEASUREMENT_ID VITE_RECAPTCHA_SITE_KEY \
+                      VITE_MAP_KEY VITE_CLARITY_ID; do
+            printf '%s=%s\n' "$name" "${!name:-}" >> .env
+          done
+
+      - name: Build
+        run: npm run build
+
+      # Catches the silent-undefined failure before it reaches users.
+      - name: Verify bundle is configured
+        env:
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+        run: |
+          set -euo pipefail
+          test -f dist/index.html
+          test -f dist/.htaccess
+          grep -rqF "$VITE_FIREBASE_PROJECT_ID" dist/assets/*.js \
+            || { echo "::error::Built bundle has no Firebase config"; exit 1; }
+
+      - name: Configure SSH
+        env:
+          SSH_KEY: ${{ secrets.DREAMHOST_SSH_KEY }}
+          SSH_HOST: ${{ secrets.DREAMHOST_HOST }}
+          SSH_KNOWN_HOSTS: ${{ secrets.DREAMHOST_KNOWN_HOSTS }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          if [ -n "${SSH_KNOWN_HOSTS:-}" ]; then
+            printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          else
+            echo "::warning::DREAMHOST_KNOWN_HOSTS unset; trusting host key on first use"
+            ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null
+          fi
+          chmod 600 ~/.ssh/known_hosts
+
+      # Trailing slash on dist/ copies its contents, not the directory itself.
+      # -a preserves dotfiles such as .htaccess; --delete purges superseded
+      # hashed bundles so old assets do not accumulate forever.
+      - name: Rsync to DreamHost
+        env:
+          SSH_USER: ${{ secrets.DREAMHOST_USER }}
+          SSH_HOST: ${{ secrets.DREAMHOST_HOST }}
+          DEPLOY_PATH: ${{ secrets.DREAMHOST_PATH }}
+        run: |
+          set -euo pipefail
+          rsync -rlptz --delete \
+            -e "ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=yes" \
+            dist/ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Remove deploy key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key
