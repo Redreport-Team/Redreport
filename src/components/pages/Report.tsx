@@ -8,8 +8,7 @@ import {
   type WithFieldValue,
 } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import { reportConverter, type ReportDoc } from "../../types/report";
-import { calculateNewRisk } from "./riskCalculator";
+import { calculateNewRisk } from "../../config/riskCalculator";
 import Map from "./Map";
 import { locations } from "../../types/locations";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";

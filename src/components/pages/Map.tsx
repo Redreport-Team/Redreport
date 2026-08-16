@@ -16,6 +16,37 @@ import {
 import type { Building, FilterState, MapPoint } from "./mapLogic.ts";
 import "../../components/css/Map.css";
 
+interface Case {
+  campus: string;
+  location: string;
+  specificLocation: string;
+  offenseTypes: string[];
+  time: string;
+  individualsInvolved: number;
+  createdAt: Timestamp;
+  additionalInfo: string;
+}
+
+interface MapPoint {
+  buildingName: string;
+  coordinates: [number, number];
+  totalIncidents: number;
+  incidentCounts: {
+    [key: string]: number; // Type -> Count
+  };
+  campus: string;
+  buildingType: string;
+  recentIncidents: Case[];
+  individualsInvolved: number;
+}
+
+interface FilterState {
+  selectedCampus: string;
+  selectedMonth: string;
+  selectedTypes: string[];
+  showMenu: boolean;
+}
+
 // Incident type options
 const incidentTypes = [
   { id: 0, name: "uncomfortable-situation", color: "#de9e36" },
@@ -90,6 +121,87 @@ function Map() {
     initializeMapPoints();
   }, [Points, filters]);
 
+  // Convert points from Firebase : <Case> into complete <MapPoints> with firebase.ts
+  const MapPointConversion = () => {
+    const TempMapPoints: { [key: string]: MapPoint } = {};
+    // Get points that fit filter criteria
+    const filteredPoints = applyFilters(Points);
+    filteredPoints.forEach((point) => {
+      // Find the building in allBuildings with the same specificLocation name
+      const location = allBuildings.find(
+        (building: any) => building.name === point.specificLocation
+      );
+
+      const individualsInvolved = point.individualsInvolved;
+      console.log(individualsInvolved);
+      // Incident types
+      const TempIncidentCounts: { [key: string]: number } = {
+        "uncomfortable-situation": 0,
+        "sexual-misconduct": 0,
+        "physical-aggression": 0,
+        "verbal-aggression": 0,
+        discrimination: 0,
+      };
+
+      // For totalIncidents, increment if already present for this buildingName
+      const totalIncidents = TempMapPoints[point.specificLocation]
+        ?.totalIncidents
+        ? TempMapPoints[point.specificLocation].totalIncidents + 1
+        : 1;
+      const incidentCounts: { [key: string]: number } = {
+        ...TempIncidentCounts,
+      };
+
+      // Key properties from Case and building
+      const buildingName =
+        point.specificLocation || location?.name || "Unknown Location";
+
+      const coordinates: [number, number] =
+        location &&
+        typeof location.latitude === "number" &&
+        typeof location.longitude === "number"
+          ? [location.latitude, location.longitude]
+          : [0, 0];
+      const campus = point.campus || location?.campus || "Unknown Campus";
+      const buildingType =
+        location?.type || location?.buildingType || "Unknown Type";
+
+      if (!TempMapPoints[buildingName]) {
+        // First incident for this building
+        TempMapPoints[buildingName] = {
+          buildingName,
+          coordinates,
+          totalIncidents: 1,
+          incidentCounts: {
+            "uncomfortable-situation": 0,
+            "sexual-misconduct": 0,
+            "physical-aggression": 0,
+            "verbal-aggression": 0,
+            discrimination: 0,
+          },
+          campus,
+          buildingType,
+          recentIncidents: [point],
+          individualsInvolved,
+        };
+      } else {
+        // Additional incident for existing building
+        TempMapPoints[buildingName].totalIncidents++;
+        TempMapPoints[buildingName].recentIncidents.push(point);
+      }
+      // Increment incident type counts (fixed operator)
+      if (point.offenseTypes) {
+        point.offenseTypes.forEach((type) => {
+          if (TempMapPoints[buildingName].incidentCounts[type] !== undefined) {
+            TempMapPoints[buildingName].incidentCounts[type]++; // Fixed!
+          }
+        });
+      }
+    });
+    setMapPoints(TempMapPoints);
+    return TempMapPoints;
+  };
+
   // Add individual MapPoints to the Map as circles
   const initializeMapPoints = () => {
     const CurrentMapPoints = buildMapPoints(
@@ -156,6 +268,54 @@ function Map() {
             className: "enhanced-popup",
           });
       }
+    });
+  };
+
+  // Get available months from data for FilterMenu
+  const getAvailableMonths = () => {
+    const months = new Set<string>();
+    Points.forEach((point) => {
+      const date = new Date(point.createdAt.toMillis());
+      const monthYear = `${date.getFullYear()}-${String(
+        date.getMonth() + 1
+      ).padStart(2, "0")}`;
+      months.add(monthYear);
+    });
+    return ["All", ...Array.from(months).sort().reverse()];
+  };
+
+  const applyFilters = (points: Case[]) => {
+    return points.filter((point) => {
+      // Campus filter
+      if (filters.selectedCampus !== "All") {
+        const campusData = campuses.find(
+          (building) => building === point.campus
+        );
+        if (!campusData || campusData !== filters.selectedCampus) {
+          return false;
+        }
+      }
+
+      // Month filter
+      if (filters.selectedMonth !== "All") {
+        const pointDate = new Date(point.createdAt.toMillis());
+        const pointMonth = `${pointDate.getFullYear()}-${String(
+          pointDate.getMonth() + 1
+        ).padStart(2, "0")}`;
+        if (pointMonth !== filters.selectedMonth) {
+          return false;
+        }
+      }
+
+      // Type filter
+      if (
+        filters.selectedTypes.length > 0 &&
+        !filters.selectedTypes.some((type) => point.offenseTypes.includes(type))
+      ) {
+        return false;
+      }
+
+      return true;
     });
   };
 
