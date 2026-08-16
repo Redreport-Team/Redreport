@@ -1,7 +1,13 @@
-import L from "leaflet";
-import { useEffect, useRef, useState } from "react";
-import "leaflet/dist/leaflet.css";
-import { MaptilerLayer } from "@maptiler/leaflet-maptilersdk";
+import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  config,
+  LngLatBounds,
+  Map as MaptilerMap,
+  Popup,
+  type GeoJSONSource,
+} from "@maptiler/sdk";
+import "@maptiler/sdk/dist/maptiler-sdk.css";
+import type { FeatureCollection, Point } from "geojson";
 import { campuses, allBuildings } from "../../types/locations.ts";
 import { collection, query, getDocs } from "firebase/firestore";
 import { db } from "../../config/firebase.ts";
@@ -16,53 +22,144 @@ import {
 import type { Building, FilterState, MapPoint } from "./mapLogic.ts";
 import "../../components/css/Map.css";
 
-interface Case {
-  campus: string;
-  location: string;
-  specificLocation: string;
-  offenseTypes: string[];
-  time: string;
-  individualsInvolved: number;
-  createdAt: Timestamp;
-  additionalInfo: string;
-}
-
-interface MapPoint {
-  buildingName: string;
-  coordinates: [number, number];
-  totalIncidents: number;
-  incidentCounts: {
-    [key: string]: number; // Type -> Count
-  };
-  campus: string;
-  buildingType: string;
-  recentIncidents: Case[];
-  individualsInvolved: number;
-}
-
-interface FilterState {
-  selectedCampus: string;
-  selectedMonth: string;
-  selectedTypes: string[];
-  showMenu: boolean;
-}
-
-// Incident type options
-const incidentTypes = [
-  { id: 0, name: "uncomfortable-situation", color: "#de9e36" },
-  { id: 1, name: "sexual-misconduct", color: "#ca3c25" },
-  { id: 2, name: "physical-aggression", color: "#701d52" },
-  { id: 3, name: "verbal-aggression", color: "#212475" },
-  { id: 4, name: "discrimination", color: "#1d1a05" },
+// MapTiler/MapLibre takes [longitude, latitude] — the reverse of the
+// [latitude, longitude] pairs used in locations.ts and mapLogic.
+const TRI_CAMPUS_CENTER: [number, number] = [-86.2379, 41.7002];
+const TRI_CAMPUS_BOUNDS: [[number, number], [number, number]] = [
+  [-86.2879, 41.5852], // south-west
+  [-86.1779, 41.7852], // north-east
 ];
+
+const INCIDENT_SOURCE = "incidents";
+const INCIDENT_LAYER = "incident-circles";
+const CAMPUS_LAYER = "incident-campus-dots";
+
+// Single source of truth for offense types: drives the filter checkboxes, the
+// circle colours, and the popup legend.
+const INCIDENT_TYPES = [
+  { name: "uncomfortable-situation", color: "#de9e36" },
+  { name: "sexual-misconduct", color: "#ca3c25" },
+  { name: "physical-aggression", color: "#701d52" },
+  { name: "verbal-aggression", color: "#212475" },
+  { name: "discrimination", color: "#1d1a05" },
+];
+
+const INCIDENT_COLORS: Record<string, string> = Object.fromEntries(
+  INCIDENT_TYPES.map((type) => [type.name, type.color])
+);
+
+const CAMPUS_COLORS: Record<string, string> = {
+  "Notre-Dame": "#FFD700",
+  "Holy-Cross": "#ffffff",
+  "Saint-Marys": "#87CEEB",
+};
+
+const EMPTY_COLLECTION: FeatureCollection = {
+  type: "FeatureCollection",
+  features: [],
+};
+
+/** Offense type with the highest count at a building. */
+function dominantType(mapPoint: MapPoint): string {
+  const [type] =
+    Object.entries(mapPoint.incidentCounts).sort(([, a], [, b]) => b - a)[0] ??
+    [];
+  return type ?? "";
+}
+
+function buildPopupHtml(mapPoint: MapPoint): string {
+  const [riskScore, recentCases] = calculateRiskScore(mapPoint.recentIncidents);
+
+  const riskColor =
+    riskScore >= 4
+      ? "#ca3c25" // High
+      : riskScore >= 3
+      ? "#de9e36" // Medium-high
+      : riskScore >= 2
+      ? "#212475" // Medium
+      : "#28a745"; // Low
+
+  const typeBreakdown = Object.entries(mapPoint.incidentCounts)
+    .filter(([, count]) => count > 0)
+    .map(([type, count]) => {
+      const color = INCIDENT_COLORS[type];
+      if (!color) return "";
+      const displayName = type
+        .replace(/-/g, " ")
+        .replace(/\b\w/g, (letter) => letter.toUpperCase());
+      return `<div style="margin: 2px 0; font-size: 12px;">
+          <span style="color: ${color}; font-weight: bold;">●</span>
+          ${displayName}: ${count}
+        </div>`;
+    })
+    .join("");
+
+  const recency =
+    recentCases > 0
+      ? `<br><span style="font-size: 12px; color: #666;">(${recentCases} recent case${
+          recentCases > 1 ? "s" : ""
+        } in last 7 days)</span>`
+      : '<br><span style="font-size: 12px; color: #28a745;">(No recent activity)</span>';
+
+  return `
+    <div class="enhanced-popup-content">
+      <h3 style="margin: 0 0 10px 0; color: #333;">${mapPoint.buildingName}</h3>
+
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: bold; color: #666;">Campus:</span> ${mapPoint.campus}<br>
+        <span style="font-weight: bold; color: #666;">Building Type:</span> ${mapPoint.buildingType}
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: bold; color: #666;">Total Cases:</span> ${mapPoint.totalIncidents}
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: bold; color: #666;">Types of Aggressions:</span><br>
+        ${typeBreakdown}
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <span style="font-weight: bold; color: #666;">Risk Score:</span>
+        <span style="color: ${riskColor}; font-weight: bold; font-size: 16px;">${riskScore}/5</span>
+        ${recency}
+      </div>
+    </div>
+  `;
+}
+
+/** One point feature per building, carrying its own styling and popup. */
+function toIncidentGeoJSON(mapPoints: {
+  [key: string]: MapPoint;
+}): FeatureCollection {
+  return {
+    type: "FeatureCollection",
+    features: Object.values(mapPoints)
+      .filter((mapPoint) => mapPoint.totalIncidents > 0)
+      .map((mapPoint) => {
+        const [latitude, longitude] = mapPoint.coordinates;
+        return {
+          type: "Feature" as const,
+          geometry: {
+            type: "Point" as const,
+            coordinates: [longitude, latitude],
+          },
+          properties: {
+            radius: Math.min(mapPoint.totalIncidents * 3 + 8, 34),
+            color: INCIDENT_COLORS[dominantType(mapPoint)] ?? "#666666",
+            campusColor: CAMPUS_COLORS[mapPoint.campus] ?? "#000000",
+            popupHtml: buildPopupHtml(mapPoint),
+          },
+        };
+      }),
+  };
+}
 
 function Map() {
   const [Points, SetPoints] = useState<ReportDoc[]>([]);
-  const [MapPoints, setMapPoints] = useState<{
-    [key: string]: MapPoint;
-  }>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [styleReady, setStyleReady] = useState(false);
   const [filters, setFilters] = useState<FilterState>({
     selectedCampus: "All",
     selectedMonth: "All",
@@ -70,256 +167,126 @@ function Map() {
     showMenu: false,
   });
 
-  // References to keep track of map components
-  const mapRef = useRef<L.Map | null>(null);
-  const circlesRef = useRef<L.LayerGroup | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<MaptilerMap | null>(null);
 
-  // Initiate Map
+  // Derived, not stored: recomputing is cheap and keeps one source of truth.
+  const mapPoints = useMemo(
+    () => buildMapPoints(Points, filters, allBuildings as Building[]),
+    [Points, filters]
+  );
+
+  // Load reports
   useEffect(() => {
-    // Fetch Data from Firebase and set it as <Point> type
     const getData = async () => {
       try {
         const reportsRef = collection(db, "reports").withConverter(
           reportConverter
         );
-        const q = query(reportsRef);
-        const querySnapshot = await getDocs(q);
+        const querySnapshot = await getDocs(query(reportsRef));
         // Skip legacy/malformed docs missing a valid createdAt Timestamp —
-        // reading .toMillis() on those would throw during render and blank the page.
-        SetPoints(querySnapshot.docs.map((doc) => doc.data()).filter(isUsableReport));
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching incidents:", error);
+        // reading .toMillis() on those throws during render and blanks the page.
+        SetPoints(
+          querySnapshot.docs.map((doc) => doc.data()).filter(isUsableReport)
+        );
+      } catch (err) {
+        console.error("Error fetching incidents:", err);
         setError("Failed to fetch incident data");
+      } finally {
         setLoading(false);
       }
     };
-    // Call above function
+
     getData();
-
-    // Set up Map using MapTilerSDK and Leaflet
-    if (!mapRef.current) {
-      mapRef.current = L.map("map", { maxZoom: 19 })
-        .setView([41.7002, -86.2379], 15)
-        .setMinZoom(15)
-        .setMaxBounds([
-          [41.7852, -86.1779],
-          [41.5852, -86.2879],
-        ]);
-
-      new MaptilerLayer({
-        style: "streets-v2",
-        apiKey: import.meta.env.VITE_MAP_KEY,
-      }).addTo(mapRef.current);
-
-      circlesRef.current = L.layerGroup().addTo(mapRef.current!);
-    }
   }, []);
 
+  // Create the map
   useEffect(() => {
-    // Start displaying MapPoints on Map
-    initializeMapPoints();
-  }, [Points, filters]);
+    if (mapRef.current || !containerRef.current) return;
 
-  // Convert points from Firebase : <Case> into complete <MapPoints> with firebase.ts
-  const MapPointConversion = () => {
-    const TempMapPoints: { [key: string]: MapPoint } = {};
-    // Get points that fit filter criteria
-    const filteredPoints = applyFilters(Points);
-    filteredPoints.forEach((point) => {
-      // Find the building in allBuildings with the same specificLocation name
-      const location = allBuildings.find(
-        (building: any) => building.name === point.specificLocation
-      );
+    config.apiKey = import.meta.env.VITE_MAP_KEY;
 
-      const individualsInvolved = point.individualsInvolved;
-      console.log(individualsInvolved);
-      // Incident types
-      const TempIncidentCounts: { [key: string]: number } = {
-        "uncomfortable-situation": 0,
-        "sexual-misconduct": 0,
-        "physical-aggression": 0,
-        "verbal-aggression": 0,
-        discrimination: 0,
-      };
-
-      // For totalIncidents, increment if already present for this buildingName
-      const totalIncidents = TempMapPoints[point.specificLocation]
-        ?.totalIncidents
-        ? TempMapPoints[point.specificLocation].totalIncidents + 1
-        : 1;
-      const incidentCounts: { [key: string]: number } = {
-        ...TempIncidentCounts,
-      };
-
-      // Key properties from Case and building
-      const buildingName =
-        point.specificLocation || location?.name || "Unknown Location";
-
-      const coordinates: [number, number] =
-        location &&
-        typeof location.latitude === "number" &&
-        typeof location.longitude === "number"
-          ? [location.latitude, location.longitude]
-          : [0, 0];
-      const campus = point.campus || location?.campus || "Unknown Campus";
-      const buildingType =
-        location?.type || location?.buildingType || "Unknown Type";
-
-      if (!TempMapPoints[buildingName]) {
-        // First incident for this building
-        TempMapPoints[buildingName] = {
-          buildingName,
-          coordinates,
-          totalIncidents: 1,
-          incidentCounts: {
-            "uncomfortable-situation": 0,
-            "sexual-misconduct": 0,
-            "physical-aggression": 0,
-            "verbal-aggression": 0,
-            discrimination: 0,
-          },
-          campus,
-          buildingType,
-          recentIncidents: [point],
-          individualsInvolved,
-        };
-      } else {
-        // Additional incident for existing building
-        TempMapPoints[buildingName].totalIncidents++;
-        TempMapPoints[buildingName].recentIncidents.push(point);
-      }
-      // Increment incident type counts (fixed operator)
-      if (point.offenseTypes) {
-        point.offenseTypes.forEach((type) => {
-          if (TempMapPoints[buildingName].incidentCounts[type] !== undefined) {
-            TempMapPoints[buildingName].incidentCounts[type]++; // Fixed!
-          }
-        });
-      }
+    const map = new MaptilerMap({
+      container: containerRef.current,
+      style: "streets-v4",
+      center: TRI_CAMPUS_CENTER,
+      zoom: 15,
+      minZoom: 15,
+      maxZoom: 19,
+      maxBounds: TRI_CAMPUS_BOUNDS,
     });
-    setMapPoints(TempMapPoints);
-    return TempMapPoints;
-  };
+    mapRef.current = map;
 
-  // Add individual MapPoints to the Map as circles
-  const initializeMapPoints = () => {
-    const CurrentMapPoints = buildMapPoints(
-      Points,
-      filters,
-      allBuildings as Building[]
-    );
-    setMapPoints(CurrentMapPoints);
+    map.on("load", () => {
+      map.addSource(INCIDENT_SOURCE, {
+        type: "geojson",
+        data: EMPTY_COLLECTION,
+      });
 
-    // Clear any circles present
-    if (circlesRef.current) circlesRef.current?.clearLayers();
+      // Outer circle: size by incident count, colour by dominant offense type.
+      map.addLayer({
+        id: INCIDENT_LAYER,
+        type: "circle",
+        source: INCIDENT_SOURCE,
+        paint: {
+          "circle-radius": ["get", "radius"],
+          "circle-color": ["get", "color"],
+          "circle-opacity": 0.7,
+          "circle-stroke-width": 2,
+          "circle-stroke-color": ["get", "color"],
+        },
+      });
 
-    Object.values(CurrentMapPoints).forEach((mapPoint) => {
-      if (mapPoint.totalIncidents > 0) {
-        // Determine circle size based on total incidents
-        const circleSize = Math.min(mapPoint.totalIncidents * 10 + 15, 100);
+      // Inner dot: colour by campus.
+      map.addLayer({
+        id: CAMPUS_LAYER,
+        type: "circle",
+        source: INCIDENT_SOURCE,
+        paint: {
+          "circle-radius": 5,
+          "circle-color": ["get", "campusColor"],
+          "circle-opacity": 0.5,
+        },
+      });
 
-        // Determine color based on most common incident type
-        const mostCommonType = Object.entries(mapPoint.incidentCounts).sort(
-          ([, a], [, b]) => b - a
-        )[0][0];
+      map.on("click", INCIDENT_LAYER, (event) => {
+        const feature = event.features?.[0];
+        if (!feature) return;
 
-        const typeColors: { [key: string]: string } = {
-          "uncomfortable-situation": "#de9e36",
-          "sexual-misconduct": "#ca3c25",
-          "physical-aggression": "#701d52",
-          "verbal-aggression": "#212475",
-          discrimination: "#1d1a05",
-        };
+        const { coordinates } = feature.geometry as Point;
+        new Popup({ maxWidth: "400px", className: "enhanced-popup" })
+          .setLngLat([coordinates[0], coordinates[1]])
+          .setHTML(String(feature.properties?.popupHtml ?? ""))
+          .addTo(map);
+      });
 
-        const circleColor = typeColors[mostCommonType] || "#666666";
-        // Create main incident circle
-        L.circle(mapPoint.coordinates, {
-          color: circleColor,
-          fillColor: circleColor,
-          fillOpacity: 0.7,
-          radius: circleSize,
-          weight: 2,
-        }).addTo(circlesRef.current!);
+      map.on("mouseenter", INCIDENT_LAYER, () => {
+        map.getCanvas().style.cursor = "pointer";
+      });
+      map.on("mouseleave", INCIDENT_LAYER, () => {
+        map.getCanvas().style.cursor = "";
+      });
 
-        // Create detailed popup with enhanced information
-        const popupContent = createEnhancedPopup(mapPoint);
-
-        // Determine color and border of inner circle based on campus
-        let fillColor = "black";
-        if (mapPoint.campus == "Notre-Dame") {
-          fillColor = "#FFD700";
-        } else if (mapPoint.campus == "Holy-Cross") {
-          fillColor = "#fff";
-        } else if (mapPoint.campus == "Saint-Marys") {
-          fillColor = "#87CEEB";
-        }
-
-        L.circle(mapPoint.coordinates, {
-          fillColor: fillColor,
-          fillOpacity: 0.5,
-          color: fillColor,
-          stroke: false,
-          radius: 15,
-        })
-          .addTo(circlesRef.current!)
-          .bindPopup(popupContent, {
-            maxWidth: 400,
-            className: "enhanced-popup",
-          });
-      }
+      setStyleReady(true);
     });
-  };
 
-  // Get available months from data for FilterMenu
-  const getAvailableMonths = () => {
-    const months = new Set<string>();
-    Points.forEach((point) => {
-      const date = new Date(point.createdAt.toMillis());
-      const monthYear = `${date.getFullYear()}-${String(
-        date.getMonth() + 1
-      ).padStart(2, "0")}`;
-      months.add(monthYear);
-    });
-    return ["All", ...Array.from(months).sort().reverse()];
-  };
+    return () => {
+      map.remove();
+      mapRef.current = null;
+      setStyleReady(false);
+    };
+  }, []);
 
-  const applyFilters = (points: Case[]) => {
-    return points.filter((point) => {
-      // Campus filter
-      if (filters.selectedCampus !== "All") {
-        const campusData = campuses.find(
-          (building) => building === point.campus
-        );
-        if (!campusData || campusData !== filters.selectedCampus) {
-          return false;
-        }
-      }
+  // Push the current points onto the map whenever they or the filters change
+  useEffect(() => {
+    if (!styleReady) return;
 
-      // Month filter
-      if (filters.selectedMonth !== "All") {
-        const pointDate = new Date(point.createdAt.toMillis());
-        const pointMonth = `${pointDate.getFullYear()}-${String(
-          pointDate.getMonth() + 1
-        ).padStart(2, "0")}`;
-        if (pointMonth !== filters.selectedMonth) {
-          return false;
-        }
-      }
+    const source = mapRef.current?.getSource(INCIDENT_SOURCE) as
+      | GeoJSONSource
+      | undefined;
+    source?.setData(toIncidentGeoJSON(mapPoints));
+  }, [mapPoints, styleReady]);
 
-      // Type filter
-      if (
-        filters.selectedTypes.length > 0 &&
-        !filters.selectedTypes.some((type) => point.offenseTypes.includes(type))
-      ) {
-        return false;
-      }
-
-      return true;
-    });
-  };
-
-  // Handle filter changes
   const handleFilterChange = (
     filterType: keyof FilterState,
     value: string | string[] | boolean
@@ -330,7 +297,6 @@ function Map() {
     }));
   };
 
-  // Toggle incident type filter
   const toggleIncidentType = (type: string) => {
     setFilters((prev) => ({
       ...prev,
@@ -340,107 +306,26 @@ function Map() {
     }));
   };
 
-  // Navigate to campus
   const navigateToCampus = (campus: string) => {
-    if (!mapRef.current) return;
+    const map = mapRef.current;
+    if (!map) return;
 
     if (campus === "All") {
-      mapRef.current.setView([41.7002, -86.2379], 15);
-    } else {
-      const campusbuildings = buildingsForCampus(
-        allBuildings as Building[],
-        campus
-      );
-      if (campusbuildings.length > 0) {
-        const bounds = L.latLngBounds(
-          campusbuildings.map((building) => [
-            building.latitude,
-            building.longitude,
-          ])
-        );
-        mapRef.current.fitBounds(bounds, { padding: [50, 50] });
-      }
+      map.easeTo({ center: TRI_CAMPUS_CENTER, zoom: 15 });
+      return;
     }
-  };
 
-  const createEnhancedPopup = (mapPoint: MapPoint): string => {
-    const [riskScore, recentCases] = calculateRiskScore(
-      mapPoint.recentIncidents
+    const campusBuildings = buildingsForCampus(
+      allBuildings as Building[],
+      campus
     );
-    // Risk color based on score
-    const riskColor =
-      riskScore >= 4
-        ? "#ca3c25" // Red for high risk
-        : riskScore >= 3
-        ? "#de9e36" // Orange for medium-high risk
-        : riskScore >= 2
-        ? "#212475" // Blue for medium risk
-        : "#28a745"; // Green for low risk
+    if (campusBuildings.length === 0) return;
 
-    const typeInfo = [
-      { name: "uncomfortable-situation", color: "#de9e36" },
-      { name: "sexual-misconduct", color: "#ca3c25" },
-      { name: "physical-aggression", color: "#701d52" },
-      { name: "verbal-aggression", color: "#212475" },
-      { name: "discrimination", color: "#1d1a05" },
-    ];
-
-    return `
-      <div class="enhanced-popup-content">
-        <h3 style="margin: 0 0 10px 0; color: #333;">${
-          mapPoint.buildingName
-        }</h3>
-        
-        <div style="margin-bottom: 10px;">
-          <span style="font-weight: bold; color: #666;">Campus:</span> ${
-            mapPoint.campus
-          }<br>
-          <span style="font-weight: bold; color: #666;">Building Type:</span> ${
-            mapPoint.buildingType
-          }
-        </div>
-        
-        <div style="margin-bottom: 10px;">
-          <span style="font-weight: bold; color: #666;">Total Cases:</span> ${
-            mapPoint.totalIncidents
-          }
-        </div>
-        
-        <div style="margin-bottom: 10px;">
-          <span style="font-weight: bold; color: #666;">Types of Aggressions:</span><br>
-          ${Object.entries(mapPoint.incidentCounts)
-            .filter(([, count]) => count > 0)
-            .map(([type, count]) => {
-              const typeData = typeInfo.find((t) => t.name === type);
-              if (!typeData) return "";
-              const displayName = typeData.name
-                .replace(/-/g, " ")
-                .replace(/\b\w/g, (l) => l.toUpperCase());
-              return `<div style="margin: 2px 0; font-size: 12px;">
-                <span style="color: ${typeData.color}; font-weight: bold;">●</span>
-                ${displayName}: ${count}
-              </div>`;
-            })
-            .join("")}
-        </div>
-        
-        <div style="margin-bottom: 10px;">
-          <span style="font-weight: bold; color: #666;">Risk Score:</span> 
-          <span style="color: ${riskColor}; font-weight: bold; font-size: 16px;">
-            ${riskScore}/5
-          </span>
-          ${
-            recentCases > 0
-              ? `<br><span style="font-size: 12px; color: #666;">
-              (${recentCases} recent case${
-                  recentCases > 1 ? "s" : ""
-                } in last 7 days)
-            </span>`
-              : '<br><span style="font-size: 12px; color: #28a745;">(No recent activity)</span>'
-          }
-        </div>
-      </div>
-    `;
+    const bounds = new LngLatBounds();
+    campusBuildings.forEach((building) => {
+      bounds.extend([building.longitude, building.latitude]);
+    });
+    map.fitBounds(bounds, { padding: 50 });
   };
 
   return (
@@ -454,14 +339,14 @@ function Map() {
             opacity: filters.showMenu ? 1 : 0,
           }}
         >
-          {/* Only show filter content if menu is open */}
           <div className="filter-content">
             <h3>Map Filters</h3>
 
             {/* Campus Filter */}
             <div className="filter-section">
-              <label>Campus:</label>
+              <label htmlFor="campus-filter">Campus:</label>
               <select
+                id="campus-filter"
                 value={filters.selectedCampus}
                 onChange={(e) => {
                   handleFilterChange("selectedCampus", e.target.value);
@@ -479,8 +364,9 @@ function Map() {
 
             {/* Month Filter */}
             <div className="filter-section">
-              <label>Month:</label>
+              <label htmlFor="month-filter">Month:</label>
               <select
+                id="month-filter"
                 value={filters.selectedMonth}
                 onChange={(e) =>
                   handleFilterChange("selectedMonth", e.target.value)
@@ -499,7 +385,7 @@ function Map() {
             <div className="filter-section">
               <label>Incident Types:</label>
               <div className="type-filters">
-                {incidentTypes.map((type) => (
+                {INCIDENT_TYPES.map((type) => (
                   <label
                     key={type.name}
                     className="type-checkbox custom-circle-checkbox"
@@ -527,10 +413,7 @@ function Map() {
                           width="16"
                           height="16"
                           viewBox="0 0 16 16"
-                          style={{
-                            display: "block",
-                            margin: "auto",
-                          }}
+                          style={{ display: "block", margin: "auto" }}
                         >
                           <circle
                             cx="13"
@@ -547,6 +430,7 @@ function Map() {
                 ))}
               </div>
             </div>
+
             {/* Clear Filters */}
             <button
               className="clear-filters-btn"
@@ -561,9 +445,10 @@ function Map() {
             >
               Clear All Filters
             </button>
+
             {/* Results Summary */}
             <div className="results-summary">
-              <p>Showing {Object.values(MapPoints).length} incidents</p>
+              <p>Showing {Object.values(mapPoints).length} incidents</p>
               {filters.selectedCampus !== "All" && (
                 <p>Campus: {filters.selectedCampus}</p>
               )}
@@ -571,12 +456,7 @@ function Map() {
                 <p>Period: {filters.selectedMonth}</p>
               )}
               {filters.selectedTypes.length > 0 && (
-                <p>
-                  Types:{" "}
-                  {filters.selectedTypes
-                    .map((id) => incidentTypes.find((t) => t.name === id)?.name)
-                    .join(", ")}
-                </p>
+                <p>Types: {filters.selectedTypes.join(", ")}</p>
               )}
             </div>
           </div>
@@ -588,6 +468,7 @@ function Map() {
           {filters.showMenu ? "✕" : "☰"}
         </button>
       </div>
+
       {/* Back Button */}
       <div className="form-group abs right ">
         <a href="../" className="back-button form-btn">
@@ -612,7 +493,7 @@ function Map() {
       {error && <div className="error-overlay">{error}</div>}
 
       {/* Map Container */}
-      <div id="map" className="fullscreen-map"></div>
+      <div ref={containerRef} id="map" className="fullscreen-map"></div>
     </div>
   );
 }

@@ -1,7 +1,3 @@
-<img width="1366" height="768" alt="RedReport" src="https://github.com/user-attachments/assets/f26b01e7-589f-4bbc-84e8-0f59b2944870" />
-
-![forthebadge](https://forthebadge.com/images/badges/made-with-html_css.svg)
-![forthebadge](https://forthebadge.com/images/badges/made-with-react.svg)
 </br>
 
 <a> [![Contributors][contributors-shield]][contributors-url] </a>
@@ -33,7 +29,7 @@ RedReport is preparing for launch at the University of Notre Dame, acting as a s
 
 ## Live Version
 
-[![Website](https://img.shields.io/website?url=https%3A%2F%2Freddot.report%2F&up_message=Live&down_message=Down&style=for-the-badge&label=Reporting%20Tool)](https://reddot.report/)
+[![Website](https://img.shields.io/website?url=https%3A%2F%2Freddot.report%2F&up_message=Live&down_message=Down&style=for-the-badge&label=Reporting%20Tool)](https://redreport.app/)
 
 ## Screenshots
 
@@ -52,26 +48,7 @@ RedReport is preparing for launch at the University of Notre Dame, acting as a s
 [![LinkedIn](https://img.shields.io/badge/linkedin-%230077B5.svg?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/gasparlarrain/)
 [![Gmail](https://img.shields.io/badge/Gmail-D14836?style=for-the-badge&logo=gmail&logoColor=white)]()
 
-## Credits
-
-### Early testing assistance
-
-| Name     |                                                                      Links                                                                       |
-| :------- | :----------------------------------------------------------------------------------------------------------------------------------------------: |
-| Moraa    | [![LinkedTree](https://img.shields.io/badge/linktree-43E55E?style=flat&logo=linktree&logoColor=white)](https://linktr.ee/JustARandomSquirrelFan) |
-| Erian S. |                                                                                                                                                  |
-| Srbth    |                                                                                                                                                  |
-| Chinaza  |                                                                                                                                                  |
-
-### Testing Program
-
-_Website V1.0.0 Cohort_ - 13 Testers - 4 Countries - 6 Colleges
-
-Thank you to everyone involved, including but not limited to:
-
-Papaloco, Moraa, Cesar Gonzalez II, Emma, Scott, hugo
-
-## Appendix
+## Associated Research
 
 Larrain, Gaspar (2025). Underreporting Might be for the Better Technological Innovation Blueprint regarding Sexual Assault: Understanding. University of Notre Dame. Dataset. https://doi.org/10.7274/29577557.v1
 

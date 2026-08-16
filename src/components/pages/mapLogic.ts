@@ -88,10 +88,24 @@ export function getEstimatedDays(
 }
 
 /**
+ * How much heavier an incident counts for the number of people involved.
+ *
+ * A group incident is treated as more serious than a solo one, but the effect
+ * is deliberately mild so recency stays the dominant signal.
+ */
+export function groupSizeWeight(individualsInvolved: number): number {
+  if (!Number.isFinite(individualsInvolved) || individualsInvolved <= 1) {
+    return 1.0;
+  }
+  return individualsInvolved >= 4 ? 1.6 : 1.3;
+}
+
+/**
  * Risk score in the 0-5 range, plus a count of incidents from the last 7 days.
  *
  * Each report's weight decays hyperbolically with age, so a cluster of recent
- * incidents outweighs the same number spread over a semester.
+ * incidents outweighs the same number spread over a semester, and is then
+ * scaled by how many people were involved.
  */
 export function calculateRiskScore(
   reports: ReportDoc[],
@@ -110,8 +124,9 @@ export function calculateRiskScore(
 
     // Clamped so a zero/negative age cannot produce an infinite weight.
     const recencyWeight = Math.min((3 / estimatedAggressionTime) * 2, 2);
+    const safeRecency = Number.isFinite(recencyWeight) ? recencyWeight : 2;
 
-    totalPoints += Number.isFinite(recencyWeight) ? recencyWeight : 2;
+    totalPoints += safeRecency * groupSizeWeight(report.individualsInvolved);
   }
 
   if (totalPoints === 0) {

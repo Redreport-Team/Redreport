@@ -7,6 +7,7 @@ import {
   emptyIncidentCounts,
   getAvailableMonths,
   getEstimatedDays,
+  groupSizeWeight,
   toMonthKey,
 } from "./mapLogic.ts";
 import type { Building, FilterState } from "./mapLogic.ts";
@@ -183,6 +184,42 @@ describe("calculateRiskScore", () => {
     const [score] = calculateRiskScore([report], NOW);
 
     expect(Number.isFinite(score)).toBe(true);
+    expect(score).toBeLessThanOrEqual(5.0);
+  });
+});
+
+describe("groupSizeWeight", () => {
+  it("leaves a lone individual unweighted", () => {
+    expect(groupSizeWeight(1)).toBe(1.0);
+    expect(groupSizeWeight(0)).toBe(1.0);
+  });
+
+  it("weights small and large groups progressively", () => {
+    expect(groupSizeWeight(2)).toBeGreaterThan(groupSizeWeight(1));
+    expect(groupSizeWeight(4)).toBeGreaterThan(groupSizeWeight(2));
+  });
+
+  it("ignores a missing or malformed count", () => {
+    expect(groupSizeWeight(NaN)).toBe(1.0);
+    expect(groupSizeWeight(undefined as unknown as number)).toBe(1.0);
+  });
+
+  it("raises the risk score for a group incident", () => {
+    const solo = makeReport({ individualsInvolved: 1 });
+    const group = makeReport({ individualsInvolved: 5 });
+
+    const [soloScore] = calculateRiskScore([solo], NOW);
+    const [groupScore] = calculateRiskScore([group], NOW);
+
+    expect(groupScore).toBeGreaterThan(soloScore);
+  });
+
+  it("keeps a group incident inside the 0-5 scale", () => {
+    const flood = Array.from({ length: 500 }, () =>
+      makeReport({ individualsInvolved: 10, time: "within-24-hours" })
+    );
+
+    const [score] = calculateRiskScore(flood, NOW);
     expect(score).toBeLessThanOrEqual(5.0);
   });
 });

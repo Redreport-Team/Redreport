@@ -12,39 +12,54 @@ vi.mock("firebase/firestore", () => ({
 
 vi.mock("../../config/firebase", () => ({ db: {} }));
 
-// Leaflet and the MapTiler SDK need a real canvas/WebGL context, which jsdom
-// has not got. The behaviour under test here is render-time data handling, not
-// tile rendering, so the map itself is stubbed out.
-vi.mock("@maptiler/leaflet-maptilersdk", () => ({
-  MaptilerLayer: class {
+// The MapTiler SDK needs a real WebGL context, which jsdom has not got. What
+// is under test here is render-time data handling, not tile rendering, so the
+// map is stubbed out.
+vi.mock("@maptiler/sdk", () => {
+  class FakeMap {
+    on() {
+      return this;
+    }
+    addSource() {}
+    addLayer() {}
+    getSource() {
+      return { setData: () => {} };
+    }
+    getCanvas() {
+      return { style: {} };
+    }
+    easeTo() {}
+    fitBounds() {}
+    remove() {}
+  }
+
+  class FakeLngLatBounds {
+    extend() {
+      return this;
+    }
+  }
+
+  class FakePopup {
+    setLngLat() {
+      return this;
+    }
+    setHTML() {
+      return this;
+    }
     addTo() {
       return this;
     }
-  },
-}));
-
-vi.mock("leaflet", () => {
-  const layerGroup = { addTo: () => layerGroup, clearLayers: () => {} };
-  const map = {
-    setView: () => map,
-    setMinZoom: () => map,
-    setMaxBounds: () => map,
-    fitBounds: () => map,
-  };
-  const circle = {
-    addTo: () => circle,
-    bindPopup: () => circle,
-  };
+  }
 
   return {
-    default: {
-      map: () => map,
-      layerGroup: () => layerGroup,
-      circle: () => circle,
-      latLngBounds: () => ({}),
-    },
+    Map: FakeMap,
+    LngLatBounds: FakeLngLatBounds,
+    Popup: FakePopup,
+    config: { apiKey: "" },
   };
 });
+
+vi.mock("@maptiler/sdk/dist/maptiler-sdk.css", () => ({}));
 
 import Map from "./Map.tsx";
 

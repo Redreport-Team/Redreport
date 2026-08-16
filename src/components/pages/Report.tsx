@@ -8,8 +8,7 @@ import {
   type WithFieldValue,
 } from "firebase/firestore";
 import { db } from "../../config/firebase";
-import { calculateNewRisk } from "../../config/riskCalculator";
-import Map from "./Map";
+import { reportConverter, type ReportDoc } from "../../types/report";
 import { locations } from "../../types/locations";
 import { useGoogleReCaptcha } from "react-google-recaptcha-v3";
 
@@ -153,15 +152,6 @@ const Report: React.FC = () => {
     if (!validateCurrentStep()) {
       return;
     }
-    //const finalRiskScore = calculateNewRisk(riskScore, individualsInvolved as number);
-
-    /*const finalReportData = {
-      location: location,
-      incidentType: incidentType,
-      description: description, 
-      individualsInvolved: individualsInvolved,
-      riskScore = finalRiskScore;
-    }*/
 
     setIsSubmitting(true);
 
