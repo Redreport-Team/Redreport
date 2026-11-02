@@ -1,9 +1,7 @@
-# React Router BrowserRouter: Redirect everything except files/folders to index.html
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteBase /
 
-  # If the request is not a real file or directory, redirect to index.html
   RewriteCond %{REQUEST_FILENAME} !-f
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule ^ index.html [L]

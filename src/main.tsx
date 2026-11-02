@@ -14,7 +14,7 @@ Clarity.init(projectId);
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <GoogleReCaptchaProvider reCaptchaKey={RECAPTCHA_SITE_KEY}>
+    <GoogleReCaptchaProvider reCaptchaKey={RECAPTCHA_SITE_KEY} useEnterprise>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<LandingPage />} />

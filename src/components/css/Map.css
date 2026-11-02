@@ -519,17 +519,15 @@ h6 {
 }
 
 /* Map Popup Enhancements */
-.leaflet-popup-content-wrapper {
+.maplibregl-popup-content {
   border-radius: 12px;
-}
-
-.leaflet-popup-tip {
-  background: white;
-}
-
-.leaflet-popup-content {
   margin: 0;
-  padding: 0;
+  padding: 12px;
+}
+
+.maplibregl-popup-tip {
+  border-top-color: white;
+  border-bottom-color: white;
 }
 
 /* Scrollbar Styling */

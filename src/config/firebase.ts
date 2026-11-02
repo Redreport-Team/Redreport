@@ -2,7 +2,10 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { Analytics, getAnalytics } from "firebase/analytics";
-import { initializeAppCheck, ReCaptchaV3Provider } from "firebase/app-check";
+import {
+  initializeAppCheck,
+  ReCaptchaEnterpriseProvider,
+} from "firebase/app-check";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -43,12 +46,12 @@ if (typeof window !== "undefined") {
   window.addEventListener("DOMContentLoaded", () => {
     try {
       initializeAppCheck(app, {
-        provider: new ReCaptchaV3Provider(
+        provider: new ReCaptchaEnterpriseProvider(
           import.meta.env.VITE_RECAPTCHA_SITE_KEY
         ),
         isTokenAutoRefreshEnabled: true,
       });
-      console.log("✓ App Check initialized with reCAPTCHA v3");
+      console.log("✓ App Check initialized with reCAPTCHA Enterprise");
     } catch (error) {
       console.error("✗ App Check initialization failed:", error);
     }
